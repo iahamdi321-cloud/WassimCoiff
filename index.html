@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Wassim Coiff · Le Grénat</title>
+<link rel="icon" type="image/png" href="icon-192.png" />
+
+<!-- PWA : installable sur l'écran d'accueil -->
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#7B1E3A" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Wassim Coiff" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+
+<!-- Générateur de QR code (mis en cache hors-ligne par le service worker) -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js" crossorigin="anonymous"></script>
+
+<!-- =====================================================================
+  LE GRÉNAT — Application salon de coiffure homme (FR / العربية)
+  Tout dans un seul fichier (HTML + CSS + JS).
+  Données : localStorage pour l'instant — voir la section "COUCHE DONNEES"
+  dans le bloc de code pour brancher Firebase Firestore plus tard.
+  Hébergement : déposez ce fichier sur un dépôt GitHub puis activez
+  GitHub Pages pour obtenir une URL publique.
+  Admin par défaut :  identifiant = admin   /   mot de passe = admin
+  ===================================================================== -->
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&family=Cairo:wght@400;600;700;800&display=swap');
+
+:root{
+  --bg:#17110F; --bg-2:#201714; --garnet:#7B1E3A; --garnet-deep:#5A1129;
+  --garnet-soft:#A8324E; --brass:#C9A24B; --brass-soft:#E2C886;
+  --cream:#F4EDE2; --cream-dim:#CBBEB2; --ink:#241A17; --muted:#9B8A82;
+  --line:rgba(244,237,226,.12); --ok:#5FA46A; --warn:#D98A3D; --danger:#C24B4B;
+  --radius:14px; --radius-lg:22px; --shadow:0 18px 50px rgba(0,0,0,.45);
+  --display:'Oswald','Cairo',system-ui,sans-serif; --body:'Inter','Cairo',system-ui,sans-serif;
+  --maxw:560px;
+}
+[lang="ar"],[dir="rtl"]{ --display:'Cairo','Oswald',system-ui,sans-serif; --body:'Cairo','Inter',system-ui,sans-serif; }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--body); color:var(--cream); min-height:100dvh; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  background:
+    radial-gradient(1200px 600px at 50% -10%,rgba(123,30,58,.35),transparent 60%),
+    radial-gradient(800px 500px at 100% 110%,rgba(201,162,75,.10),transparent 55%),
+    var(--bg);
+}
+.pole{width:100%;height:6px;border-radius:6px;opacity:.9;
+  background:repeating-linear-gradient(115deg,var(--garnet) 0 12px,var(--cream) 12px 24px,var(--garnet-deep) 24px 36px)}
+[dir="rtl"] .pole{background:repeating-linear-gradient(-115deg,var(--garnet) 0 12px,var(--cream) 12px 24px,var(--garnet-deep) 24px 36px)}
+
+.app{max-width:var(--maxw);margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;position:relative}
+.screen{display:none;flex:1;flex-direction:column}
+.screen.active{display:flex}
+.screen-tab{display:none}
+.screen-tab.active{display:block}
+.pad{padding:18px 18px 48px}
+
+header.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px 10px}
+.appbar{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--line)}
+.topnav{display:flex;gap:6px;padding:5px;margin:0 18px 10px;background:var(--bg-2);border:1px solid var(--line);border-radius:12px;overflow-x:auto;scrollbar-width:none}
+.topnav::-webkit-scrollbar{display:none}
+.topnav button{flex:1 1 auto;min-width:max-content;border:0;background:transparent;color:var(--muted);font-family:var(--display);text-transform:uppercase;letter-spacing:.04em;font-weight:600;font-size:.74rem;padding:9px 10px;border-radius:9px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:6px;justify-content:center;white-space:nowrap}
+.topnav button .ic{font-size:15px}
+.topnav button.on{background:var(--garnet);color:var(--cream)}
+.brand{display:flex;align-items:center;gap:11px}
+.brand .mark{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-size:18px;
+  background:radial-gradient(circle at 30% 25%,var(--garnet-soft),var(--garnet-deep));
+  border:1.5px solid var(--brass);color:var(--brass-soft);box-shadow:0 4px 14px rgba(123,30,58,.6)}
+.brand .name{font-family:var(--display);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:1.05rem;line-height:1}
+.brand .name span{color:var(--brass-soft)}
+.brand .tag{font-size:.64rem;color:var(--muted);letter-spacing:.18em;text-transform:uppercase}
+.logo-mark-img{width:64%;height:auto;display:block}
+.top-actions{display:flex;align-items:center;gap:8px}
+
+.lang-toggle{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--bg-2)}
+.lang-toggle button{border:0;background:transparent;color:var(--muted);font-family:var(--body);font-weight:600;font-size:.78rem;padding:6px 12px;cursor:pointer;transition:.18s}
+.lang-toggle button.on{background:var(--garnet);color:var(--cream)}
+.icon-btn{border:1px solid var(--line);background:var(--bg-2);color:var(--cream-dim);width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:16px;display:grid;place-items:center;transition:.18s}
+.icon-btn:hover{border-color:var(--brass);color:var(--brass-soft)}
+
+.splash{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px 24px;gap:26px}
+.splash .logo-big{width:96px;height:96px;border-radius:50%;display:grid;place-items:center;font-size:42px;color:var(--brass-soft);
+  background:radial-gradient(circle at 30% 25%,var(--garnet-soft),var(--garnet-deep));border:2px solid var(--brass);box-shadow:0 16px 40px rgba(123,30,58,.55)}
+.splash h1{font-family:var(--display);text-transform:uppercase;letter-spacing:.18em;font-size:2rem;font-weight:700}
+.splash h1 span{color:var(--brass-soft)}
+.splash p{color:var(--muted);max-width:320px}
+.lang-cards{display:grid;gap:12px;width:100%;max-width:320px}
+.lang-card{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--line);cursor:pointer;transition:.18s;color:var(--cream);font-family:var(--display);font-size:1.05rem;letter-spacing:.05em}
+.lang-card:hover{border-color:var(--brass);transform:translateY(-2px)}
+.lang-card .flag{font-size:1.5rem}
+
+.section-head{display:flex;align-items:baseline;justify-content:space-between;margin:6px 0 14px}
+.section-head h2{font-family:var(--display);text-transform:uppercase;letter-spacing:.1em;font-weight:600;font-size:1.4rem}
+.eyebrow{color:var(--brass-soft);font-size:.7rem;letter-spacing:.22em;text-transform:uppercase;font-weight:600}
+.card{background:linear-gradient(180deg,var(--bg-2),#1b1310);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:0 8px 22px rgba(0,0,0,.28)}
+
+.menu{display:grid;gap:10px}
+.svc{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:13px;padding:14px 16px;border-radius:var(--radius);
+  background:linear-gradient(180deg,var(--bg-2),#1b1310);border:1px solid var(--line);transition:.18s}
+.svc:hover{border-color:rgba(201,162,75,.5);transform:translateY(-1px)}
+.svc .ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:20px;color:var(--brass-soft);background:rgba(123,30,58,.22);border:1px solid rgba(201,162,75,.22)}
+.svc .info .nm{font-family:var(--display);font-size:1.08rem;letter-spacing:.03em}
+.svc .info .meta{font-size:.78rem;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap}
+.svc .right{text-align:end;display:grid;gap:8px;justify-items:end}
+.price{font-family:var(--display);color:var(--brass-soft);font-size:1.25rem;font-weight:600;white-space:nowrap}
+.price small{font-size:.62rem;color:var(--muted);letter-spacing:.12em}
+
+.btn{font-family:var(--display);letter-spacing:.08em;text-transform:uppercase;font-weight:600;font-size:.82rem;border:0;border-radius:11px;padding:11px 16px;cursor:pointer;transition:.16s;display:inline-flex;align-items:center;gap:7px;justify-content:center}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(180deg,var(--garnet-soft),var(--garnet));color:var(--cream);box-shadow:0 6px 16px rgba(123,30,58,.5)}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-brass{background:linear-gradient(180deg,var(--brass-soft),var(--brass));color:#2a200a}
+.btn-ghost{background:transparent;border:1px solid var(--line);color:var(--cream-dim)}
+.btn-ghost:hover{border-color:var(--brass);color:var(--brass-soft)}
+.btn-ok{background:var(--ok);color:#fff}
+.btn-warn{background:var(--warn);color:#2a1c08}
+.btn-danger{background:transparent;border:1px solid rgba(194,75,75,.5);color:#e08a8a}
+.btn-sm{padding:8px 12px;font-size:.72rem;border-radius:9px}
+.btn-block{width:100%}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.76rem;color:var(--cream-dim);margin-bottom:6px;letter-spacing:.04em}
+.input,textarea,select{width:100%;font-family:var(--body);font-size:1rem;color:var(--cream);background:#160f0d;border:1px solid var(--line);border-radius:11px;padding:12px 14px;transition:.16s}
+.input:focus,textarea:focus,select:focus{outline:none;border-color:var(--brass);box-shadow:0 0 0 3px rgba(201,162,75,.16)}
+textarea{resize:vertical;min-height:80px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.tabs-pill{display:flex;gap:6px;background:var(--bg-2);padding:5px;border-radius:12px;margin-bottom:16px;border:1px solid var(--line)}
+.tabs-pill button{flex:1;border:0;background:transparent;color:var(--muted);font-family:var(--display);letter-spacing:.06em;text-transform:uppercase;font-weight:600;font-size:.78rem;padding:9px;border-radius:9px;cursor:pointer;transition:.16s}
+.tabs-pill button.on{background:var(--garnet);color:var(--cream)}
+
+.ticket{position:relative;background:var(--cream);color:var(--ink);border-radius:var(--radius-lg);padding:22px 20px;overflow:hidden;box-shadow:var(--shadow)}
+.ticket::before,.ticket::after{content:"";position:absolute;width:26px;height:26px;border-radius:50%;background:var(--bg);top:50%;transform:translateY(-50%)}
+.ticket::before{left:-13px}.ticket::after{right:-13px}
+.ticket .perf{border-top:2px dashed rgba(36,26,23,.25);margin:16px 0}
+.ticket .tk-top{display:flex;justify-content:space-between;align-items:flex-start}
+.tk-label{font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;color:var(--garnet);font-weight:700}
+.ticket .tk-svc{font-family:var(--display);font-size:1.5rem;letter-spacing:.02em;margin-top:2px}
+.tk-status{font-family:var(--display);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;padding:5px 11px;border-radius:999px;font-weight:600;white-space:nowrap}
+.st-attente{background:rgba(217,138,61,.18);color:#9a5e1f}
+.st-valide{background:rgba(95,164,106,.18);color:#2f6a3a}
+.st-encours{background:rgba(123,30,58,.16);color:var(--garnet)}
+.st-termine{background:rgba(36,26,23,.1);color:#5a4a44}
+.bignum{font-family:var(--display);font-size:4.2rem;line-height:.9;font-weight:700;color:var(--garnet);letter-spacing:-.02em}
+.bignum small{font-size:1rem;color:var(--muted);font-weight:500;letter-spacing:.05em}
+.tk-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tk-cell .k{font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:#8a7268}
+.tk-cell .v{font-family:var(--display);font-size:1.5rem;color:var(--ink)}
+.progress{height:8px;border-radius:999px;background:rgba(36,26,23,.12);overflow:hidden;margin-top:6px}
+.progress>span{display:block;height:100%;background:linear-gradient(90deg,var(--garnet),var(--garnet-soft));transition:width 1s linear}
+
+.queue-row{display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:center;padding:13px 14px;border-radius:var(--radius);background:var(--bg-2);border:1px solid var(--line);margin-bottom:10px}
+.queue-row.is-encours{border-color:var(--garnet-soft);background:rgba(123,30,58,.14)}
+.queue-row .pos{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-family:var(--display);font-weight:700;color:var(--brass-soft);background:rgba(201,162,75,.1);border:1px solid rgba(201,162,75,.25)}
+.queue-row .who{font-weight:600}
+.queue-row .sub{font-size:.76rem;color:var(--muted)}
+.queue-row .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.badge{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:999px;font-weight:700}
+.badge-admin{background:rgba(201,162,75,.18);color:var(--brass-soft)}
+.badge-client{background:rgba(244,237,226,.1);color:var(--cream-dim)}
+
+.cash-hero{text-align:center;padding:26px 18px}
+.cash-hero .amt{font-family:var(--display);font-size:3.4rem;font-weight:700;color:var(--brass-soft)}
+.cash-hero .amt small{font-size:1.1rem;color:var(--muted)}
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.stat{text-align:center}
+.stat .n{font-family:var(--display);font-size:1.7rem;color:var(--cream)}
+.stat .l{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.hist-row{display:flex;justify-content:space-between;align-items:center;padding:12px 4px;border-bottom:1px solid var(--line)}
+.hist-row .d{color:var(--cream-dim)}.hist-row .t{font-family:var(--display);color:var(--brass-soft);font-size:1.1rem}
+
+.stars{display:flex;gap:6px;font-size:1.8rem}
+.stars button{background:none;border:0;cursor:pointer;color:rgba(201,162,75,.3);transition:.12s}
+.stars button.on,.stars button:hover{color:var(--brass-soft)}
+.review{background:var(--bg-2);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:10px}
+.review .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px}
+.review .who{font-weight:600}.review .rstars{color:var(--brass-soft);letter-spacing:2px}
+.review .txt{color:var(--cream-dim);font-size:.92rem}.review .dt{font-size:.68rem;color:var(--muted)}
+
+/* navigation déplacée en haut : voir .appbar / .topnav */
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--garnet);color:var(--cream);padding:12px 18px;border-radius:999px;font-size:.9rem;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s;z-index:60;max-width:90%;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.empty{text-align:center;color:var(--muted);padding:40px 20px}.empty .ic{font-size:40px;opacity:.5;margin-bottom:10px}
+.hint{font-size:.82rem;color:var(--muted)}.center{text-align:center}.mt{margin-top:14px}.mt-s{margin-top:8px}
+.divider{height:1px;background:var(--line);margin:16px 0}
+.link-btn{background:none;border:0;color:var(--brass-soft);cursor:pointer;font-family:var(--body);font-size:.86rem;text-decoration:underline}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ---------- statut salon (ouvert / fermé) ---------- */
+.status-banner{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:var(--radius);margin-bottom:14px;border:1px solid var(--line);background:var(--bg-2)}
+.status-banner .dot{width:11px;height:11px;border-radius:50%;flex:none;box-shadow:0 0 0 4px rgba(255,255,255,.04)}
+.status-banner.is-open .dot{background:var(--ok);box-shadow:0 0 0 4px rgba(95,164,106,.2)}
+.status-banner.is-pause .dot{background:var(--warn);box-shadow:0 0 0 4px rgba(217,138,61,.2)}
+.status-banner.is-closed .dot{background:var(--danger);box-shadow:0 0 0 4px rgba(194,75,75,.2)}
+.status-banner .st-main{font-family:var(--display);letter-spacing:.06em;text-transform:uppercase;font-size:.9rem;font-weight:600}
+.status-banner .st-sub{font-size:.76rem;color:var(--muted)}
+
+/* ---------- badges promo / fidélité ---------- */
+.tag-promo{display:inline-flex;align-items:center;gap:4px;font-family:var(--display);font-size:.66rem;letter-spacing:.06em;font-weight:700;padding:3px 8px;border-radius:999px;background:linear-gradient(180deg,var(--brass-soft),var(--brass));color:#2a200a}
+.tag-free{display:inline-flex;align-items:center;gap:4px;font-family:var(--display);font-size:.66rem;letter-spacing:.06em;font-weight:700;padding:3px 8px;border-radius:999px;background:rgba(95,164,106,.2);color:#9fe0a8;border:1px solid rgba(95,164,106,.4)}
+.price .was{display:block;font-size:.7rem;color:var(--muted);text-decoration:line-through;font-weight:400;letter-spacing:0}
+.promo-strip{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--radius);margin-bottom:14px;background:linear-gradient(135deg,rgba(201,162,75,.16),rgba(123,30,58,.16));border:1px solid rgba(201,162,75,.3)}
+.promo-strip .ic{font-size:20px}
+.promo-strip .txt{font-size:.84rem;color:var(--cream)}
+.promo-strip .txt b{color:var(--brass-soft)}
+
+/* ---------- QR + ticket actions ---------- */
+.qr-box{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.qr-box img,.qr-box canvas{width:170px;height:170px;background:#fff;padding:10px;border-radius:14px;box-shadow:0 8px 22px rgba(0,0,0,.3)}
+.qr-box .cap{font-size:.78rem;color:var(--muted);max-width:240px}
+.qr-mini{display:flex;align-items:center;gap:14px;background:var(--cream);color:var(--ink);border-radius:14px;padding:12px;margin-top:14px}
+.qr-mini img,.qr-mini canvas{width:96px;height:96px;background:#fff;border-radius:8px;flex:none}
+.qr-mini .info{font-size:.78rem;color:#5a4a44}
+.qr-mini .info b{color:var(--garnet);font-family:var(--display);letter-spacing:.04em}
+.ticket-actions{display:flex;gap:8px;margin-top:14px}
+.url-row{display:flex;gap:8px;align-items:center;margin-top:10px}
+.url-row .u{flex:1;font-size:.78rem;color:var(--brass-soft);word-break:break-all;background:#160f0d;border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+
+/* ---------- statistiques ---------- */
+.stat-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.stat-card{background:linear-gradient(180deg,var(--bg-2),#1b1310);border:1px solid var(--line);border-radius:var(--radius);padding:15px}
+.stat-card .lbl{font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.stat-card .big{font-family:var(--display);font-size:1.9rem;color:var(--brass-soft);margin-top:4px;line-height:1}
+.stat-card .big small{font-size:.9rem;color:var(--muted)}
+.stat-card .sub{font-size:.72rem;color:var(--cream-dim);margin-top:4px}
+.bar-list{display:grid;gap:10px}
+.bar-item .top{display:flex;justify-content:space-between;font-size:.84rem;margin-bottom:5px}
+.bar-item .top .v{color:var(--brass-soft);font-family:var(--display)}
+.bar-track{height:10px;border-radius:999px;background:rgba(244,237,226,.08);overflow:hidden}
+.bar-track>span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--garnet),var(--garnet-soft))}
+.bar-track.brass>span{background:linear-gradient(90deg,var(--brass),var(--brass-soft))}
+.hours-bars{display:grid;grid-template-columns:repeat(auto-fit,minmax(22px,1fr));gap:6px;align-items:end;height:120px;margin-top:6px}
+.hbar{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
+.hbar .col{width:100%;max-width:20px;border-radius:5px 5px 0 0;background:linear-gradient(180deg,var(--garnet-soft),var(--garnet));min-height:3px}
+.hbar .hr{font-size:.58rem;color:var(--muted)}
+.hbar.peak .col{background:linear-gradient(180deg,var(--brass-soft),var(--brass))}
+
+/* ---------- réglages : horaires / promo / fidélité ---------- */
+.set-card{margin-bottom:16px}
+.set-card>.hd{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:.92rem;color:var(--brass-soft);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.day-row{display:grid;grid-template-columns:84px 1fr;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.day-row:last-child{border-bottom:0}
+.day-name{font-weight:600;font-size:.86rem}
+.day-times{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.day-times.off{opacity:.4;pointer-events:none}
+.time-field{display:flex;flex-direction:column;gap:3px}
+.time-field span{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.time-field input{font-family:var(--body);background:#160f0d;border:1px solid var(--line);border-radius:8px;color:var(--cream);padding:7px 8px;font-size:.84rem}
+.switch{position:relative;display:inline-block;width:44px;height:26px;flex:none}
+.switch input{opacity:0;width:0;height:0}
+.slider-sw{position:absolute;inset:0;background:#3a2a26;border-radius:999px;transition:.2s;cursor:pointer}
+.slider-sw::before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;background:var(--cream);border-radius:50%;transition:.2s}
+.switch input:checked+.slider-sw{background:var(--garnet)}
+.switch input:checked+.slider-sw::before{transform:translateX(18px)}
+[dir="rtl"] .switch input:checked+.slider-sw::before{transform:translateX(-18px)}
+.toggle-line{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.toggle-line .tl-txt{font-size:.88rem}
+.toggle-line .tl-txt small{display:block;color:var(--muted);font-size:.74rem;margin-top:2px}
+.daypick{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.daypick button{border:1px solid var(--line);background:var(--bg-2);color:var(--muted);border-radius:9px;padding:7px 10px;font-family:var(--display);font-size:.74rem;letter-spacing:.04em;cursor:pointer;transition:.15s}
+.daypick button.on{background:var(--garnet);color:var(--cream);border-color:var(--garnet-soft)}
+.ferie-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line)}
+.ferie-row .d{font-size:.86rem}
+.inline-add{display:flex;gap:8px;margin-top:10px}
+.inline-add input{flex:1}
+
+/* ---------- avis : réponse + modération + moyenne ---------- */
+.rating-summary{display:flex;align-items:center;gap:14px;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px}
+.rating-summary .avg{font-family:var(--display);font-size:2.4rem;color:var(--brass-soft);line-height:1}
+.rating-summary .avg small{font-size:1rem;color:var(--muted)}
+.rating-summary .rs-stars{color:var(--brass-soft);letter-spacing:2px;font-size:1.05rem}
+.rating-summary .rs-count{font-size:.76rem;color:var(--muted)}
+.review.hidden-rev{opacity:.5}
+.review .reply{margin-top:10px;padding:10px 12px;background:rgba(123,30,58,.14);border-left:3px solid var(--garnet-soft);border-radius:8px}
+[dir="rtl"] .review .reply{border-left:0;border-right:3px solid var(--garnet-soft)}
+.review .reply .who{color:var(--brass-soft);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;font-weight:700}
+.review .reply .txt{color:var(--cream-dim);font-size:.86rem;margin-top:3px}
+.reply-edit{margin-top:10px;display:flex;gap:8px}
+.reply-edit input{flex:1}
+
+/* ---------- bouton installer (PWA) ---------- */
+.install-banner{display:none;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(201,162,75,.16),rgba(123,30,58,.2));border:1px solid rgba(201,162,75,.3);border-radius:var(--radius);padding:12px 14px;margin:0 18px 12px}
+.install-banner.show{display:flex}
+.install-banner .ib-txt{flex:1;font-size:.84rem;color:var(--cream)}
+.install-banner .ib-txt b{color:var(--brass-soft)}
+
+/* ---------- impression du ticket ---------- */
+@media print{
+  body *{visibility:hidden!important}
+  #print-area,#print-area *{visibility:visible!important}
+  #print-area{position:absolute;inset:0;display:block!important;padding:24px;background:#fff}
+}
+#print-area{display:none}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ===== ÉCRAN LANGUE ===== -->
+  <section class="screen active" id="screen-lang">
+    <div class="splash">
+      <div class="logo-big"><img class="logo-mark-img" src="logo-mark.png" alt="Wassim Coiff" /></div>
+      <div><h1>WASSIM <span>COIFF</span></h1>
+        <p data-i18n="splash_sub" style="margin-top:12px">Choisissez votre langue / اختر لغتك</p></div>
+      <div class="lang-cards">
+        <button class="lang-card" onclick="App.setLang('fr',true)"><span class="flag">🇫🇷</span> Français</button>
+        <button class="lang-card" onclick="App.setLang('ar',true)"><span class="flag">🇹🇳</span> العربية</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ÉCRAN CONNEXION / INSCRIPTION ===== -->
+  <section class="screen" id="screen-auth">
+    <header class="topbar">
+      <div class="brand"><div class="mark"><img class="logo-mark-img" src="logo-mark.png" alt="" /></div>
+        <div><div class="name">WASSIM <span>COIFF</span></div><div class="tag" data-i18n="brand_tag">Coiffure homme</div></div>
+      </div>
+      <div class="lang-toggle" id="lang-toggle-auth"></div>
+    </header>
+    <div class="pad">
+      <div class="pole" style="margin-bottom:22px"></div>
+      <div class="tabs-pill" id="auth-tabs">
+        <button class="on" data-auth="login" data-i18n="login">Connexion</button>
+        <button data-auth="register" data-i18n="register">Inscription</button>
+      </div>
+
+      <!-- Connexion -->
+      <div class="card" id="form-login">
+        <div class="field"><label data-i18n="identifier_label">Téléphone ou identifiant</label>
+          <input class="input" id="log-id" data-i18n-ph="identifier_ph" placeholder="Téléphone" /></div>
+        <div class="field"><label data-i18n="password_label">Mot de passe</label>
+          <input class="input" id="log-pass" type="password" placeholder="••••••" /></div>
+        <button class="btn btn-primary btn-block" onclick="App.login()" data-i18n="btn_login">Se connecter</button>
+      </div>
+
+      <!-- Inscription -->
+      <div class="card" id="form-register" style="display:none">
+        <div class="field"><label data-i18n="name_label">Nom complet</label>
+          <input class="input" id="reg-name" data-i18n-ph="name_ph" placeholder="Ex : Wassim" /></div>
+        <div class="field"><label data-i18n="phone_label">Numéro de téléphone</label>
+          <input class="input" id="reg-phone" type="tel" inputmode="numeric" data-i18n-ph="phone_ph" placeholder="Ex : 22 333 444" /></div>
+        <div class="field"><label data-i18n="password_label">Mot de passe</label>
+          <input class="input" id="reg-pass" type="password" placeholder="••••••" /></div>
+        <button class="btn btn-primary btn-block" onclick="App.register()" data-i18n="btn_register">Créer mon compte</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== APP CLIENT ===== -->
+  <section class="screen" id="app-client">
+    <div class="appbar">
+      <header class="topbar">
+        <div class="brand"><div class="mark"><img class="logo-mark-img" src="logo-mark.png" alt="" /></div>
+          <div><div class="name">WASSIM <span>COIFF</span></div><div class="tag" id="client-hello">—</div></div>
+        </div>
+        <div class="top-actions"><div class="lang-toggle" id="lang-toggle-client"></div>
+          <button class="icon-btn" onclick="App.logout()" title="Quitter">⎋</button></div>
+      </header>
+      <nav class="topnav" id="client-nav">
+        <button class="on" data-tab="tab-myturn"><span class="ic">🎟️</span><span data-i18n="nav_myturn">Mon tour</span></button>
+        <button data-tab="tab-services"><span class="ic">✂️</span><span data-i18n="nav_services">Carte</span></button>
+        <button data-tab="tab-reviews"><span class="ic">⭐</span><span data-i18n="nav_reviews">Avis</span></button>
+      </nav>
+    </div>
+
+    <div class="install-banner" id="install-client">
+      <span class="ib-txt" id="install-txt-client"></span>
+      <button class="btn btn-brass btn-sm" onclick="App.promptInstall()" data-i18n="install_btn">Installer</button>
+    </div>
+    <div class="screen-tab pad active" id="tab-myturn">
+      <div class="section-head"><div><div class="eyebrow" data-i18n="turn_eyebrow">File en direct</div><h2 data-i18n="myturn_title">Mon tour</h2></div></div>
+      <div id="myturn-content"></div>
+    </div>
+
+    <div class="screen-tab pad" id="tab-services">
+      <div class="section-head"><div><div class="eyebrow" data-i18n="menu_eyebrow">Notre carte</div><h2 data-i18n="services_title">Prestations</h2></div></div>
+      <div class="menu" id="services-list"></div>
+    </div>
+
+    <div class="screen-tab pad" id="tab-reviews">
+      <div class="section-head"><div><div class="eyebrow" data-i18n="reviews_eyebrow">Votre expérience</div><h2 data-i18n="reviews_title">Avis</h2></div></div>
+      <div class="card">
+        <label class="hint" data-i18n="your_rating">Votre note</label>
+        <div class="stars mt-s" id="star-input"></div>
+        <div class="field mt"><textarea id="review-text" data-i18n-ph="review_ph" placeholder="Partagez votre expérience au salon…"></textarea></div>
+        <button class="btn btn-brass btn-block" onclick="App.submitReview()" data-i18n="submit_review">Publier mon avis</button>
+      </div>
+      <div class="section-head mt"><h2 style="font-size:1.05rem" data-i18n="all_reviews">Avis des clients</h2></div>
+      <div id="reviews-list"></div>
+    </div>
+  </section>
+
+  <!-- ===== APP ADMIN ===== -->
+  <section class="screen" id="app-admin">
+    <div class="appbar">
+      <header class="topbar">
+        <div class="brand"><div class="mark" style="background:radial-gradient(circle at 30% 25%,var(--brass-soft),var(--brass));color:#2a200a">★</div>
+          <div><div class="name">WASSIM <span>COIFF</span></div><div class="tag" id="admin-hello">Le Grénat</div></div>
+        </div>
+        <div class="top-actions"><div class="lang-toggle" id="lang-toggle-admin"></div>
+          <button class="icon-btn" onclick="App.logout()" title="Quitter">⎋</button></div>
+      </header>
+      <nav class="topnav" id="admin-nav">
+        <button class="on" data-tab="tab-queue"><span class="ic">🪑</span><span data-i18n="nav_queue">File</span></button>
+        <button data-tab="tab-cash"><span class="ic">💰</span><span data-i18n="nav_cash">Caisse</span></button>
+        <button data-tab="tab-stats"><span class="ic">📊</span><span data-i18n="nav_stats">Stats</span></button>
+        <button data-tab="tab-svc-admin"><span class="ic">✂️</span><span data-i18n="nav_svc">Carte</span></button>
+        <button data-tab="tab-users"><span class="ic">👥</span><span data-i18n="nav_users">Comptes</span></button>
+        <button data-tab="tab-areviews"><span class="ic">⭐</span><span data-i18n="nav_reviews">Avis</span></button>
+        <button data-tab="tab-settings"><span class="ic">⚙️</span><span data-i18n="nav_settings">Réglages</span></button>
+      </nav>
+    </div>
+
+    <div class="install-banner" id="install-admin">
+      <span class="ib-txt" id="install-txt-admin"></span>
+      <button class="btn btn-brass btn-sm" onclick="App.promptInstall()" data-i18n="install_btn">Installer</button>
+    </div>
+    <div class="screen-tab pad active" id="tab-queue">
+      <div class="section-head"><div><div class="eyebrow" data-i18n="queue_eyebrow">Aujourd'hui</div><h2 data-i18n="queue_title">File d'attente</h2></div></div>
+      <div id="queue-content"></div>
+    </div>
+
+    <div class="screen-tab pad" id="tab-cash">
+      <div class="section-head"><div><div class="eyebrow" data-i18n="cash_eyebrow">Recette</div><h2 data-i18n="cash_title">Caisse</h2></div></div>
+      <div id="cash-content"></div>
+    </div>
+
+    <div class="screen-tab pad" id="tab-svc-admin">
+      <div class="section-head"><div><div class="eyebrow" data-i18n="svc_admin_eyebrow">Gestion</div><h2 data-i18n="svc_admin_title">Prestations</h2></div>
+        <button class="btn btn-brass btn-sm" onclick="App.openSvcForm()" data-i18n="add">Ajouter</button></div>
+      <div id="svc-admin-content"></div>
+    </div>
+
+    <div class="screen-tab pad" id="tab-users">
+      <div class="section-head"><div><div class="eyebrow" data-i18n="users_eyebrow">Comptes</div><h2 data-i18n="users_title">Utilisateurs</h2></div></div>
+      <div id="users-content"></div>
+    </div>
+
+    <div class="screen-tab pad" id="tab-areviews">
+      <div class="section-head"><div><div class="eyebrow" data-i18n="reviews_eyebrow">Retours clients</div><h2 data-i18n="all_reviews">Avis des clients</h2></div></div>
+      <div id="areviews-list"></div>
+    </div>
+
+    <div class="screen-tab pad" id="tab-stats">
+      <div class="section-head"><div><div class="eyebrow" data-i18n="stats_eyebrow">Activité</div><h2 data-i18n="stats_title">Statistiques</h2></div></div>
+      <div id="stats-content"></div>
+    </div>
+
+    <div class="screen-tab pad" id="tab-settings">
+      <div class="section-head"><div><div class="eyebrow" data-i18n="settings_eyebrow">Configuration</div><h2 data-i18n="settings_title">Réglages</h2></div></div>
+      <div id="settings-content"></div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+  <div id="print-area"></div>
+</div>
+
+<script>
+/* =====================================================================
+   COUCHE DONNÉES  (à remplacer par Firebase Firestore plus tard)
+   ---------------------------------------------------------------------
+   Aujourd'hui tout est dans localStorage via cet objet DB.
+   Pour passer à Firebase : gardez les mêmes noms de "collections"
+   (users, bookings, services, avis, caisses) et réécrivez get()/set()
+   pour lire/écrire dans Firestore (idéalement en versions async).
+   ===================================================================== */
+const DB = {
+  get(key, def){ try{ const v = JSON.parse(localStorage.getItem("lg_"+key)); return v===null||v===undefined?def:v; }catch{ return def; } },
+  set(key, val){ localStorage.setItem("lg_"+key, JSON.stringify(val)); },
+};
+
+/* Prestations par défaut (créées au premier lancement, puis modifiables par l'admin) */
+const DEFAULT_SERVICES = [
+  { id:"coupe",    icon:"✂️", prix:10, duree:30, fr:"Coupe cheveux",            ar:"قص الشعر",        dfr:"Coupe homme classique ou dégradé", dar:"قصة كلاسيكية أو متدرجة" },
+  { id:"barbe",    icon:"🪒", prix:5,  duree:20, fr:"Barbe",                    ar:"حلاقة الذقن",     dfr:"Taille et contour de la barbe",    dar:"تهذيب وتحديد اللحية" },
+  { id:"combo",    icon:"💈", prix:20, duree:40, fr:"Coupe + Barbe + Lavage",   ar:"قص + ذقن + غسيل", dfr:"La formule complète",              dar:"العرض الكامل" },
+  { id:"creatine", icon:"✨", prix:50, duree:90, fr:"Créatine",                 ar:"كيراتين",         dfr:"Soin lissant à la créatine",       dar:"علاج مملس بالكيراتين" },
+  { id:"retouche", icon:"🔁", prix:30, duree:60, fr:"Retouche créatine",        ar:"تجديد الكيراتين", dfr:"Entretien du lissage",             dar:"صيانة التمليس" },
+  { id:"gommage",  icon:"🧴", prix:15, duree:60, fr:"Gommage",                  ar:"تقشير",           dfr:"Gommage du visage",                dar:"تقشير الوجه" },
+];
+/* Admin par défaut : admin / admin */
+const DEFAULT_ADMIN = { id:"u_admin", role:"admin", username:"admin", password:"admin", nom:"Administrateur", tel:"", createdAt:0 };
+
+/* Horaires par défaut : ouvert tous les jours 09:00–19:00, pause 13:00–14:00 (modifiable) */
+/* clés : 0=dimanche … 6=samedi  ·  bfrom/bto = pause (vide = pas de pause) */
+const DEFAULT_HOURS = {
+  days:{
+    0:{open:true, from:"09:00", to:"19:00", bfrom:"13:00", bto:"14:00"},
+    1:{open:true, from:"09:00", to:"19:00", bfrom:"13:00", bto:"14:00"},
+    2:{open:true, from:"09:00", to:"19:00", bfrom:"13:00", bto:"14:00"},
+    3:{open:true, from:"09:00", to:"19:00", bfrom:"13:00", bto:"14:00"},
+    4:{open:true, from:"09:00", to:"19:00", bfrom:"13:00", bto:"14:00"},
+    5:{open:true, from:"09:00", to:"19:00", bfrom:"13:00", bto:"14:00"},
+    6:{open:true, from:"09:00", to:"19:00", bfrom:"13:00", bto:"14:00"},
+  },
+  feries:[]   // jours fériés : ["2026-01-01", ...]
+};
+/* Promotion : remise % sur certains jours de la semaine (admin choisit) */
+const DEFAULT_PROMO = { active:false, percent:10, days:[2] };   // 2 = mardi
+/* Fidélité : la Nᵉ prestation est offerte */
+const DEFAULT_LOYALTY = { active:false, every:10 };
+/* Réglages divers (URL de l'app pour le QR, etc.) */
+const DEFAULT_SETTINGS = { appUrl:"" };
+
+/* =====================================================================
+   TRADUCTIONS
+   ===================================================================== */
+const I18N = {
+  fr:{
+    splash_sub:"Choisissez votre langue / اختر لغتك", brand_tag:"Coiffure homme",
+    login:"Connexion", register:"Inscription",
+    identifier_label:"Téléphone ou identifiant", identifier_ph:"Téléphone",
+    name_label:"Nom complet", name_ph:"Ex : Wassim",
+    phone_label:"Numéro de téléphone", phone_ph:"Ex : 22 333 444",
+    password_label:"Mot de passe",
+    btn_login:"Se connecter", btn_register:"Créer mon compte",
+    menu_eyebrow:"Notre carte", services_title:"Prestations",
+    turn_eyebrow:"File en direct", myturn_title:"Mon tour",
+    reviews_eyebrow:"Votre expérience", reviews_title:"Avis", your_rating:"Votre note",
+    review_ph:"Partagez votre expérience au salon…", submit_review:"Publier mon avis", all_reviews:"Avis des clients",
+    nav_services:"Carte", nav_myturn:"Mon tour", nav_reviews:"Avis",
+    queue_eyebrow:"Aujourd'hui", queue_title:"File d'attente", cash_eyebrow:"Recette", cash_title:"Caisse",
+    nav_queue:"File", nav_cash:"Caisse", nav_svc:"Carte", nav_users:"Comptes",
+    svc_admin_eyebrow:"Gestion", svc_admin_title:"Prestations", users_eyebrow:"Comptes", users_title:"Utilisateurs",
+    book:"Réserver",
+    status_attente:"En attente de validation", status_valide:"Validé", status_encours:"En cours", status_termine:"Terminé",
+    no_booking:"Aucune réservation en cours", no_booking_hint:"Choisissez une prestation dans la carte pour prendre votre place.",
+    ticket_label:"Votre ticket",
+    home_overview:"Aperçu de la file", home_serving:"En service", home_waiting:"En attente",
+    home_est_if_book:"Attente si vous réservez maintenant", reserve_cta:"Réserver une prestation",
+    people_ahead_n:(n)=> n===0?"Vous êtes le prochain":(n===1?"1 personne avant vous":n+" personnes avant vous"),
+    est_wait:"Attente estimée", in_progress_you:"Installez-vous, c'est parti ✂️", remaining:"Restant", cancel:"Annuler ma place",
+    validate:"Valider", start:"Commencer", finish:"Terminer", edit_time:"Durée",
+    new_duration:"Nouvelle durée estimée (minutes) :", empty_queue:"File vide pour le moment", ends_in:"fin dans",
+    today_total:"Recette du jour (en cours)", services_done:"Prestations", avg_ticket:"Ticket moyen",
+    close_register:"Fermer la caisse", confirm_close:"Fermer la caisse et enregistrer la recette du jour ?",
+    history:"Historique des journées", no_history:"Aucune journée clôturée", nothing_to_cash:"Rien à encaisser pour l'instant",
+    no_reviews:"Aucun avis pour l'instant", thanks_review:"Merci pour votre avis !", review_need_text:"Choisissez une note (étoiles).",
+    add:"Ajouter", edit:"Modifier", save:"Enregistrer", del:"Supprimer", cancel_btn:"Annuler",
+    add_admin:"Ajouter un administrateur", username_label:"Identifiant", you_badge:"vous",
+    role_admin:"Admin", role_client:"Client",
+    svc_name_fr:"Nom (français)", svc_name_ar:"Nom (arabe)", svc_icon:"Icône", svc_price:"Prix (DT)", svc_duration:"Durée (min)",
+    svc_desc_fr:"Description (FR)", svc_desc_ar:"Description (AR)", new_service:"Nouvelle prestation", edit_service:"Modifier la prestation",
+    confirm_del_user:"Supprimer cet utilisateur ?", confirm_del_svc:"Supprimer cette prestation ?", confirm_del_review:"Supprimer cet avis ?",
+    new_password:"Nouveau mot de passe :", no_clients:"Aucun utilisateur",
+    t_registered:"Compte créé, bienvenue !", t_login_ok:"Connexion réussie", t_bad_login:"Identifiant ou mot de passe incorrect.",
+    t_fill:"Remplissez tous les champs.", t_id_taken:"Cet identifiant est déjà pris.",
+    t_booked:"Place réservée ! Suivez votre tour.", t_already:"Vous avez déjà une réservation en cours.",
+    t_validated:"Client validé.", t_started:"Service démarré.", t_finished:"Service terminé et encaissé.",
+    t_time_saved:"Durée mise à jour.", t_cancelled:"Réservation annulée.", t_closed:"Caisse clôturée ✓",
+    t_user_added:"Administrateur ajouté.", t_user_deleted:"Utilisateur supprimé.", t_saved:"Enregistré.",
+    t_svc_deleted:"Prestation supprimée.", t_review_deleted:"Avis supprimé.", t_last_admin:"Impossible : c'est le dernier admin.",
+    u_min:"min", u_h:"h", dt:"DT",
+    /* --- nouvelles fonctionnalités --- */
+    nav_stats:"Stats", nav_settings:"Réglages",
+    days_abbr:["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"],
+    days_full:["Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"],
+    salon_open:"Salon ouvert", salon_pause:"En pause", salon_closed:"Salon fermé",
+    open_until:(t)=>"Ouvert jusqu'à "+t, opens_at:(t)=>"Ouvre à "+t, back_at:(t)=>"Reprise à "+t,
+    closed_today:"Fermé aujourd'hui", closed_holiday:"Fermé (jour férié)", closed_for_today:"Fermé pour aujourd'hui",
+    closed_cannot_book:"Le salon est fermé : réservation impossible.",
+    promo_today:(p)=>"Aujourd'hui : −"+p+"% sur toutes les prestations 🎉",
+    loyalty_next:(n)=>"Votre "+n+"ᵉ prestation est offerte 🎁",
+    loyalty_info:(n)=>"Fidélité : la "+n+"ᵉ prestation est offerte.",
+    price_free:"Offerte", free_loyalty:"Fidélité",
+    t_booked_free:"🎁 Prestation offerte ! Place réservée.",
+    t_booked_promo:(p)=>"Réservé avec −"+p+"% 🎉",
+    follow_qr:"Scannez pour suivre votre tour", print_ticket:"Imprimer", share_ticket:"Partager",
+    t_share_done:"Lien partagé.", t_copied:"Lien copié ✓",
+    /* stats */
+    stats_eyebrow:"Activité", stats_title:"Statistiques",
+    stat_week:"Recette (7 jours)", stat_month:"Recette du mois", stat_total:"Recette totale",
+    stat_clients:"Clients servis", stat_top:"Prestations les plus demandées", stat_peak:"Heures de pointe",
+    stats_empty:"Pas encore de données. Terminez des prestations pour voir les statistiques.",
+    times_label:(n)=>n+"×",
+    /* réglages */
+    settings_eyebrow:"Configuration", settings_title:"Réglages",
+    set_share:"Partager l'application", set_share_hint:"Affichez ce QR au salon : les clients le scannent pour ouvrir l'app.",
+    set_url_label:"Lien de l'application", copy:"Copier",
+    set_hours:"Horaires d'ouverture", set_open:"Ouvert",
+    h_open:"Ouverture", h_close:"Fermeture", h_break_from:"Pause début", h_break_to:"Pause fin",
+    save_hours:"Enregistrer les horaires", t_hours_saved:"Horaires enregistrés ✓",
+    set_holidays:"Jours fériés / fermetures", add_holiday:"Ajouter", no_holidays:"Aucune date",
+    t_holiday_added:"Date ajoutée.", t_holiday_removed:"Date retirée.",
+    set_promo:"Promotion", promo_enable:"Activer la promotion", promo_enable_sub:"Remise automatique sur les jours choisis.",
+    promo_percent:"Remise (%)", promo_days:"Jours de promotion", save_promo:"Enregistrer la promotion", t_promo_saved:"Promotion enregistrée ✓",
+    set_loyalty:"Fidélité", loyalty_enable:"Activer la fidélité", loyalty_enable_sub:"Une prestation offerte tous les N passages.",
+    loyalty_every:"Offerte toutes les N prestations", save_loyalty:"Enregistrer la fidélité", t_loyalty_saved:"Fidélité enregistrée ✓",
+    install_btn:"Installer",
+    install_client:"<b>Installer l'app</b> sur votre téléphone pour suivre votre tour plus vite.",
+    install_admin:"<b>Installer l'app</b> sur la tablette du salon.",
+    /* avis */
+    avg_label:"Note moyenne", no_rating_yet:"Pas encore de note", reviews_count:(n)=>n+(n>1?" avis":" avis"),
+    reply_label:"Répondre", reply_ph:"Votre réponse…", salon_reply:"Réponse du salon",
+    hide_review:"Masquer", show_review:"Afficher",
+    t_replied:"Réponse enregistrée.", t_hidden:"Avis masqué.", t_shown:"Avis affiché.",
+  },
+  ar:{
+    splash_sub:"اختر لغتك / Choisissez votre langue", brand_tag:"حلاقة رجالي",
+    login:"دخول", register:"تسجيل",
+    identifier_label:"الهاتف أو المعرّف", identifier_ph:"الهاتف",
+    name_label:"الاسم الكامل", name_ph:"مثال: وسيم",
+    phone_label:"رقم الهاتف", phone_ph:"مثال: 22 333 444",
+    password_label:"كلمة السر",
+    btn_login:"تسجيل الدخول", btn_register:"إنشاء حسابي",
+    menu_eyebrow:"قائمتنا", services_title:"الخدمات",
+    turn_eyebrow:"الطابور المباشر", myturn_title:"دوري",
+    reviews_eyebrow:"تجربتك", reviews_title:"التقييمات", your_rating:"تقييمك",
+    review_ph:"شاركنا تجربتك في الصالون…", submit_review:"نشر التقييم", all_reviews:"آراء الزبائن",
+    nav_services:"القائمة", nav_myturn:"دوري", nav_reviews:"التقييمات",
+    queue_eyebrow:"اليوم", queue_title:"قائمة الانتظار", cash_eyebrow:"المداخيل", cash_title:"الصندوق",
+    nav_queue:"الطابور", nav_cash:"الصندوق", nav_svc:"القائمة", nav_users:"الحسابات",
+    svc_admin_eyebrow:"إدارة", svc_admin_title:"الخدمات", users_eyebrow:"الحسابات", users_title:"المستخدمون",
+    book:"حجز",
+    status_attente:"في انتظار الموافقة", status_valide:"تمت الموافقة", status_encours:"قيد التنفيذ", status_termine:"منتهٍ",
+    no_booking:"لا يوجد حجز حالياً", no_booking_hint:"اختر خدمة من القائمة لحجز دورك.",
+    ticket_label:"تذكرتك",
+    home_overview:"نظرة على الطابور", home_serving:"قيد الخدمة", home_waiting:"في الانتظار",
+    home_est_if_book:"الانتظار إذا حجزت الآن", reserve_cta:"احجز خدمة",
+    people_ahead_n:(n)=> n===0?"أنت التالي":(n===1?"شخص واحد قبلك":n+" أشخاص قبلك"),
+    est_wait:"الانتظار المتوقع", in_progress_you:"تفضّل بالجلوس، لنبدأ ✂️", remaining:"المتبقي", cancel:"إلغاء دوري",
+    validate:"موافقة", start:"بدء", finish:"إنهاء", edit_time:"المدة",
+    new_duration:"المدة المقدّرة الجديدة (بالدقائق):", empty_queue:"الطابور فارغ حالياً", ends_in:"ينتهي بعد",
+    today_total:"مداخيل اليوم (جارية)", services_done:"الخدمات", avg_ticket:"متوسط التذكرة",
+    close_register:"إغلاق الصندوق", confirm_close:"إغلاق الصندوق وتسجيل مداخيل اليوم؟",
+    history:"سجل الأيام", no_history:"لا توجد أيام مغلقة", nothing_to_cash:"لا شيء للتحصيل حالياً",
+    no_reviews:"لا توجد تقييمات بعد", thanks_review:"شكراً على تقييمك!", review_need_text:"اختر تقييماً (نجوم).",
+    add:"إضافة", edit:"تعديل", save:"حفظ", del:"حذف", cancel_btn:"إلغاء",
+    add_admin:"إضافة مسؤول", username_label:"المعرّف", you_badge:"أنت",
+    role_admin:"مسؤول", role_client:"زبون",
+    svc_name_fr:"الاسم (فرنسي)", svc_name_ar:"الاسم (عربي)", svc_icon:"الأيقونة", svc_price:"السعر (د.ت)", svc_duration:"المدة (دقيقة)",
+    svc_desc_fr:"الوصف (FR)", svc_desc_ar:"الوصف (AR)", new_service:"خدمة جديدة", edit_service:"تعديل الخدمة",
+    confirm_del_user:"حذف هذا المستخدم؟", confirm_del_svc:"حذف هذه الخدمة؟", confirm_del_review:"حذف هذا التقييم؟",
+    new_password:"كلمة السر الجديدة:", no_clients:"لا يوجد مستخدمون",
+    t_registered:"تم إنشاء الحساب، مرحباً!", t_login_ok:"تم الدخول بنجاح", t_bad_login:"المعرّف أو كلمة السر غير صحيحة.",
+    t_fill:"املأ كل الحقول.", t_id_taken:"هذا المعرّف مستعمل مسبقاً.",
+    t_booked:"تم الحجز! تابع دورك.", t_already:"لديك حجز جارٍ بالفعل.",
+    t_validated:"تمت الموافقة على الزبون.", t_started:"بدأت الخدمة.", t_finished:"انتهت الخدمة وتم التحصيل.",
+    t_time_saved:"تم تحديث المدة.", t_cancelled:"تم إلغاء الحجز.", t_closed:"تم إغلاق الصندوق ✓",
+    t_user_added:"تمت إضافة المسؤول.", t_user_deleted:"تم حذف المستخدم.", t_saved:"تم الحفظ.",
+    t_svc_deleted:"تم حذف الخدمة.", t_review_deleted:"تم حذف التقييم.", t_last_admin:"غير ممكن: هذا آخر مسؤول.",
+    u_min:"د", u_h:"س", dt:"د.ت",
+    /* --- الميزات الجديدة --- */
+    nav_stats:"إحصائيات", nav_settings:"الإعدادات",
+    days_abbr:["أحد","إثن","ثلا","أرب","خمي","جمع","سبت"],
+    days_full:["الأحد","الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"],
+    salon_open:"الصالون مفتوح", salon_pause:"في استراحة", salon_closed:"الصالون مغلق",
+    open_until:(t)=>"مفتوح حتى "+t, opens_at:(t)=>"يفتح على "+t, back_at:(t)=>"العودة على "+t,
+    closed_today:"مغلق اليوم", closed_holiday:"مغلق (عطلة)", closed_for_today:"مغلق لبقية اليوم",
+    closed_cannot_book:"الصالون مغلق: الحجز غير ممكن.",
+    promo_today:(p)=>"اليوم: −"+p+"% على كل الخدمات 🎉",
+    loyalty_next:(n)=>"خدمتك رقم "+n+" مجانية 🎁",
+    loyalty_info:(n)=>"الوفاء: الخدمة رقم "+n+" مجانية.",
+    price_free:"مجانية", free_loyalty:"وفاء",
+    t_booked_free:"🎁 خدمة مجانية! تم الحجز.",
+    t_booked_promo:(p)=>"تم الحجز بخصم −"+p+"% 🎉",
+    follow_qr:"امسح لمتابعة دورك", print_ticket:"طباعة", share_ticket:"مشاركة",
+    t_share_done:"تمت مشاركة الرابط.", t_copied:"تم نسخ الرابط ✓",
+    /* الإحصائيات */
+    stats_eyebrow:"النشاط", stats_title:"الإحصائيات",
+    stat_week:"المداخيل (7 أيام)", stat_month:"مداخيل الشهر", stat_total:"إجمالي المداخيل",
+    stat_clients:"الزبائن", stat_top:"الخدمات الأكثر طلباً", stat_peak:"ساعات الذروة",
+    stats_empty:"لا توجد بيانات بعد. أنهِ خدمات لرؤية الإحصائيات.",
+    times_label:(n)=>n+"×",
+    /* الإعدادات */
+    settings_eyebrow:"الإعداد", settings_title:"الإعدادات",
+    set_share:"مشاركة التطبيق", set_share_hint:"اعرض رمز QR في الصالون: يمسحه الزبائن لفتح التطبيق.",
+    set_url_label:"رابط التطبيق", copy:"نسخ",
+    set_hours:"أوقات العمل", set_open:"مفتوح",
+    h_open:"الفتح", h_close:"الإغلاق", h_break_from:"بداية الاستراحة", h_break_to:"نهاية الاستراحة",
+    save_hours:"حفظ الأوقات", t_hours_saved:"تم حفظ الأوقات ✓",
+    set_holidays:"أيام العطل / الإغلاق", add_holiday:"إضافة", no_holidays:"لا توجد تواريخ",
+    t_holiday_added:"تمت إضافة التاريخ.", t_holiday_removed:"تم حذف التاريخ.",
+    set_promo:"العرض الترويجي", promo_enable:"تفعيل العرض", promo_enable_sub:"خصم تلقائي في الأيام المختارة.",
+    promo_percent:"الخصم (%)", promo_days:"أيام العرض", save_promo:"حفظ العرض", t_promo_saved:"تم حفظ العرض ✓",
+    set_loyalty:"برنامج الوفاء", loyalty_enable:"تفعيل الوفاء", loyalty_enable_sub:"خدمة مجانية كل N زيارات.",
+    loyalty_every:"مجانية كل N خدمات", save_loyalty:"حفظ", t_loyalty_saved:"تم الحفظ ✓",
+    install_btn:"تثبيت",
+    install_client:"<b>ثبّت التطبيق</b> على هاتفك لمتابعة دورك بسرعة.",
+    install_admin:"<b>ثبّت التطبيق</b> على لوحة الصالون.",
+    /* التقييمات */
+    avg_label:"متوسط التقييم", no_rating_yet:"لا يوجد تقييم بعد", reviews_count:(n)=>n+" تقييم",
+    reply_label:"الرد", reply_ph:"ردك…", salon_reply:"رد الصالون",
+    hide_review:"إخفاء", show_review:"إظهار",
+    t_replied:"تم حفظ الرد.", t_hidden:"تم إخفاء التقييم.", t_shown:"تم إظهار التقييم.",
+  },
+};
+
+/* =====================================================================
+   APPLICATION
+   ===================================================================== */
+const App = {
+  lang:"fr", session:null, reviewStars:0, authMode:"login", ticker:null,
+  svcFormOpen:false, svcEditId:null, deferredPrompt:null, _promoDaysSel:null,
+
+  init(){
+    this.ensureSeed();
+    this.lang = DB.get("lang", null);
+    this.session = DB.get("session", null);
+    this.buildLangToggles();
+    if(!this.lang){ this.show("screen-lang"); }
+    else { this.applyLang(); this.route(); }
+    this.ticker = setInterval(()=>this.tick(), 1000);
+  },
+
+  /* données de départ */
+  ensureSeed(){
+    if(DB.get("services", null)===null) DB.set("services", DEFAULT_SERVICES);
+    if(DB.get("hours", null)===null) DB.set("hours", DEFAULT_HOURS);
+    if(DB.get("promo", null)===null) DB.set("promo", DEFAULT_PROMO);
+    if(DB.get("loyalty", null)===null) DB.set("loyalty", DEFAULT_LOYALTY);
+    if(DB.get("settings", null)===null) DB.set("settings", DEFAULT_SETTINGS);
+    let users = DB.get("users", []);
+    if(!users.some(u=>u.role==="admin")){ users.unshift({...DEFAULT_ADMIN}); DB.set("users", users); }
+  },
+
+  route(){
+    const u = this.currentUser();
+    if(!u){ this.show("screen-auth"); this.switchAuth("login"); return; }
+    if(u.role==="admin") this.openAdmin(); else this.openClient();
+  },
+
+  /* ---------- langue ---------- */
+  setLang(l, fromSplash){ this.lang=l; DB.set("lang",l); this.applyLang(); if(fromSplash) this.route(); },
+  applyLang(){
+    document.documentElement.lang=this.lang;
+    document.documentElement.dir = this.lang==="ar"?"rtl":"ltr";
+    document.querySelectorAll("[data-i18n]").forEach(el=>{ const v=this.t(el.dataset.i18n); if(typeof v==="string") el.textContent=v; });
+    document.querySelectorAll("[data-i18n-ph]").forEach(el=>{ const v=this.t(el.dataset.i18nPh); if(typeof v==="string") el.placeholder=v; });
+    this.syncLangToggles(); this.renderAll(); this.updateInstallText();
+    const u=this.currentUser();
+    if(u){ const hi=this.lang==="ar"?"مرحبا، ":"Bonjour, ";
+      const ch=document.getElementById("client-hello"); if(ch) ch.textContent=hi+(u.nom?u.nom.split(" ")[0]:"");
+      const ah=document.getElementById("admin-hello"); if(ah) ah.textContent=(this.lang==="ar"?"المسؤول · ":"Gérant · ")+(u.nom||""); }
+  },
+  buildLangToggles(){
+    ["lang-toggle-auth","lang-toggle-client","lang-toggle-admin"].forEach(id=>{
+      const el=document.getElementById(id); if(!el) return;
+      el.innerHTML=`<button data-l="fr" onclick="App.setLang('fr')">FR</button><button data-l="ar" onclick="App.setLang('ar')">ع</button>`;
+    });
+    this.syncLangToggles();
+  },
+  syncLangToggles(){ document.querySelectorAll(".lang-toggle button").forEach(b=>b.classList.toggle("on", b.dataset.l===this.lang)); },
+  t(key){ const v=I18N[this.lang][key]; return v!==undefined?v:(I18N.fr[key]!==undefined?I18N.fr[key]:key); },
+
+  /* ---------- écrans ---------- */
+  show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("active", s.id===id)); },
+  showTab(tabId, navId){
+    const nav=document.getElementById(navId);
+    const screen=nav.closest(".screen");
+    screen.querySelectorAll(".screen-tab").forEach(t=>t.classList.toggle("active", t.id===tabId));
+    nav.querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.tab===tabId));
+    try{ window.scrollTo(0,0); }catch(e){}
+    this.renderAll();
+  },
+
+  /* ---------- auth ---------- */
+  switchAuth(mode){
+    this.authMode=mode;
+    document.querySelectorAll("#auth-tabs button").forEach(b=>b.classList.toggle("on", b.dataset.auth===mode));
+    document.getElementById("form-login").style.display = mode==="login"?"":"none";
+    document.getElementById("form-register").style.display = mode==="register"?"":"none";
+  },
+  normPhone(s){ return (s||"").replace(/\s+/g,"").trim(); },
+
+  login(){
+    const id=this.normPhone(document.getElementById("log-id").value);
+    const pass=document.getElementById("log-pass").value;
+    if(!id||!pass) return this.toast(this.t("t_fill"));
+    const u=DB.get("users",[]).find(x=>x.username===id && x.password===pass);
+    if(!u) return this.toast(this.t("t_bad_login"));
+    this.session={userId:u.id}; DB.set("session",this.session);
+    this.toast(this.t("t_login_ok")); this.applyLang(); this.route();
+  },
+  register(){
+    const nom=document.getElementById("reg-name").value.trim();
+    const tel=this.normPhone(document.getElementById("reg-phone").value);
+    const pass=document.getElementById("reg-pass").value;
+    if(!nom||!tel||!pass) return this.toast(this.t("t_fill"));
+    const users=DB.get("users",[]);
+    if(users.some(u=>u.username===tel)) return this.toast(this.t("t_id_taken"));
+    const u={id:"u"+Date.now(), role:"client", username:tel, password:pass, nom, tel, lang:this.lang, createdAt:Date.now()};
+    users.push(u); DB.set("users",users);
+    this.session={userId:u.id}; DB.set("session",this.session);
+    this.toast(this.t("t_registered")); this.applyLang(); this.openClient();
+  },
+  logout(){ this.session=null; DB.set("session",null); document.getElementById("log-pass").value=""; this.show("screen-auth"); this.switchAuth("login"); },
+
+  currentUser(){ if(!this.session) return null; return DB.get("users",[]).find(u=>u.id===this.session.userId)||null; },
+  isAdmin(){ const u=this.currentUser(); return u && u.role==="admin"; },
+
+  openClient(){
+    const u=this.currentUser(); const hi=this.lang==="ar"?"مرحبا، ":"Bonjour, ";
+    document.getElementById("client-hello").textContent=hi+(u?u.nom.split(" ")[0]:"");
+    this.show("app-client"); this.showTab("tab-myturn","client-nav");
+  },
+  openAdmin(){
+    const u=this.currentUser();
+    document.getElementById("admin-hello").textContent=(this.lang==="ar"?"المسؤول · ":"Gérant · ")+(u?u.nom:"");
+    this.show("app-admin"); this.showTab("tab-queue","admin-nav");
+  },
+
+  /* =================== PRESTATIONS =================== */
+  services(){ return DB.get("services", DEFAULT_SERVICES); },
+  svc(id){ return this.services().find(s=>s.id===id); },
+  svcName(s){ return this.lang==="ar"?s.ar:s.fr; },
+  svcDesc(s){ return this.lang==="ar"?s.dar:s.dfr; },
+  bName(b){ return this.lang==="ar"?(b.nom_ar||""):(b.nom_fr||""); },
+
+  fmtDur(min){ const h=Math.floor(min/60), m=min%60;
+    if(h===0) return m+" "+this.t("u_min"); if(m===0) return h+this.t("u_h"); return h+this.t("u_h")+(m<10?"0":"")+m; },
+  fmtMoney(n){ return n+" "+this.t("dt"); },
+  fmtClock(ms){ ms=Math.max(0,ms); const tot=Math.round(ms/1000), m=Math.floor(tot/60), s=tot%60; return m+":"+(s<10?"0":"")+s; },
+  today(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); },
+  fmtDate(j){ try{ return new Date(j+"T00:00:00").toLocaleDateString(this.lang==="ar"?"ar-TN":"fr-FR",{weekday:"long",day:"numeric",month:"long"}); }catch{ return j; } },
+
+  renderServices(){
+    const w=document.getElementById("services-list"); if(!w) return;
+    const u=this.currentUser();
+    const P=DB.get("promo",DEFAULT_PROMO);
+    const promoActive = P.active && P.percent>0 && (P.days||[]).includes(new Date().getDay());
+    const L=DB.get("loyalty",DEFAULT_LOYALTY);
+    const closed=!this.canBookNow();
+    let strips="";
+    if(promoActive) strips+=`<div class="promo-strip"><span class="ic">🎉</span><div class="txt">${this.t("promo_today")(P.percent)}</div></div>`;
+    if(L.active && L.every>0 && u){
+      const nxt=this.loyaltyNextIndex(u);
+      if(nxt % L.every === 0) strips+=`<div class="promo-strip"><span class="ic">🎁</span><div class="txt"><b>${this.t("loyalty_next")(nxt)}</b></div></div>`;
+      else strips+=`<div class="promo-strip" style="background:rgba(244,237,226,.05)"><span class="ic">🏅</span><div class="txt">${this.t("loyalty_info")(L.every)}</div></div>`;
+    }
+    const items=this.services().map(s=>{
+      const disc = promoActive ? Math.round(s.prix*(1-P.percent/100)) : s.prix;
+      const priceHTML = promoActive
+        ? `<span class="was">${s.prix} ${this.t("dt")}</span>${disc}<small> ${this.t("dt")}</small>`
+        : `${s.prix}<small> ${this.t("dt")}</small>`;
+      return `<div class="svc">
+        <div class="ic">${s.icon}</div>
+        <div class="info"><div class="nm">${this.svcName(s)} ${promoActive?`<span class="tag-promo">−${P.percent}%</span>`:""}</div>
+          <div class="meta"><span>⏱ ${this.fmtDur(s.duree)}</span><span>${this.svcDesc(s)}</span></div></div>
+        <div class="right"><div class="price">${priceHTML}</div>
+          <button class="btn btn-primary btn-sm" onclick="App.book('${s.id}')" ${closed?"disabled":""}>${this.t("book")}</button></div>
+      </div>`;
+    }).join("");
+    w.innerHTML=(closed?this.statusBannerHTML():"")+strips+items;
+  },
+
+  book(serviceId){
+    const u=this.currentUser(); if(!u) return;
+    if(!this.canBookNow()){ this.toast(this.t("closed_cannot_book")); return this.showTab("tab-myturn","client-nav"); }
+    const bookings=DB.get("bookings",[]);
+    const active=bookings.find(b=>b.userId===u.id && b.jour===this.today() && ["attente","valide","encours"].includes(b.statut));
+    if(active){ this.toast(this.t("t_already")); return this.showTab("tab-myturn","client-nav"); }
+    const s=this.svc(serviceId); if(!s) return;
+    const pr=this.computePrice(s,u);
+    bookings.push({ id:"b"+Date.now(), userId:u.id, clientNom:u.nom,
+      serviceId:s.id, icon:s.icon, nom_fr:s.fr, nom_ar:s.ar,
+      prix:pr.final, prixBase:pr.base, remisePct:pr.remisePct, gratuit:pr.gratuit, duree:s.duree,
+      statut:"attente", jour:this.today(), createdAt:Date.now(), startAt:null, endAt:null });
+    DB.set("bookings",bookings);
+    this.toast(pr.gratuit?this.t("t_booked_free"):(pr.remisePct?this.t("t_booked_promo")(pr.remisePct):this.t("t_booked")));
+    this.showTab("tab-myturn","client-nav");
+  },
+
+  /* ---------- horaires : statut du salon ---------- */
+  hours(){ return DB.get("hours", DEFAULT_HOURS); },
+  hm2min(s){ const p=(s||"0:0").split(":"); return (parseInt(p[0],10)||0)*60+(parseInt(p[1],10)||0); },
+  salonStatus(now){
+    now=now||new Date(); const H=this.hours();
+    const ymd=this.today();
+    if((H.feries||[]).includes(ymd)) return {open:false, reason:"closed_holiday"};
+    const dow=now.getDay(); const d=H.days[dow]||H.days[String(dow)];
+    if(!d||!d.open) return {open:false, reason:"closed_today"};
+    const cur=now.getHours()*60+now.getMinutes();
+    const from=this.hm2min(d.from), to=this.hm2min(d.to);
+    if(cur<from) return {open:false, reason:"before", at:d.from};
+    if(cur>=to) return {open:false, reason:"after"};
+    if(d.bfrom && d.bto){ const bf=this.hm2min(d.bfrom), bt=this.hm2min(d.bto);
+      if(cur>=bf && cur<bt) return {open:false, reason:"pause", at:d.bto, until:d.to}; }
+    return {open:true, reason:"open", until:d.to};
+  },
+  canBookNow(){
+    const now=new Date(); const H=this.hours(); const ymd=this.today();
+    if((H.feries||[]).includes(ymd)) return false;
+    const d=H.days[now.getDay()]||H.days[String(now.getDay())];
+    if(!d||!d.open) return false;
+    const cur=now.getHours()*60+now.getMinutes();
+    return cur>=this.hm2min(d.from) && cur<this.hm2min(d.to);   // pause = file ouverte
+  },
+  statusBannerHTML(){
+    const s=this.salonStatus();
+    let cls="is-closed", main=this.t("salon_closed"), sub="";
+    if(s.open){ cls="is-open"; main=this.t("salon_open"); sub=this.t("open_until")(s.until); }
+    else if(s.reason==="pause"){ cls="is-pause"; main=this.t("salon_pause"); sub=this.t("back_at")(s.at); }
+    else if(s.reason==="before"){ sub=this.t("opens_at")(s.at); }
+    else if(s.reason==="after"){ sub=this.t("closed_for_today"); }
+    else if(s.reason==="closed_holiday"){ sub=this.t("closed_holiday"); }
+    else { sub=this.t("closed_today"); }
+    return `<div class="status-banner ${cls}"><span class="dot"></span>
+      <div><div class="st-main">${main}</div>${sub?`<div class="st-sub">${sub}</div>`:""}</div></div>`;
+  },
+
+  /* ---------- promotions + fidélité : calcul du prix ---------- */
+  computePrice(s, u){
+    let base=s.prix, final=base, remisePct=0, gratuit=false;
+    const L=DB.get("loyalty", DEFAULT_LOYALTY);
+    if(L.active && L.every>0 && u){
+      const done=DB.get("bookings",[]).filter(b=>b.userId===u.id && b.statut==="termine").length;
+      if((done+1) % L.every === 0){ gratuit=true; final=0; }
+    }
+    if(!gratuit){
+      const P=DB.get("promo", DEFAULT_PROMO);
+      if(P.active && P.percent>0 && (P.days||[]).includes(new Date().getDay())){
+        remisePct=P.percent; final=Math.round(base*(1-remisePct/100));
+      }
+    }
+    return {base, final, remisePct, gratuit};
+  },
+  loyaltyNextIndex(u){   // n° de la prochaine prestation pour ce client (1,2,3…)
+    if(!u) return 0;
+    return DB.get("bookings",[]).filter(b=>b.userId===u.id && b.statut==="termine").length + 1;
+  },
+
+  /* ---------- QR codes ---------- */
+  appUrl(){
+    const s=DB.get("settings", DEFAULT_SETTINGS);
+    if(s && s.appUrl) return s.appUrl;
+    try{ return location.href.split("#")[0]; }catch(e){ return ""; }
+  },
+  qrDataURL(text, cell, margin){
+    if(typeof qrcode==="undefined" || !text) return null;
+    try{ const qr=qrcode(0,"M"); qr.addData(text); qr.make(); return qr.createDataURL(cell||5, margin==null?2:margin); }
+    catch(e){ return null; }
+  },
+  qrImg(text, cell){ const d=this.qrDataURL(text, cell); return d?`<img src="${d}" alt="QR" />`:`<div class="hint">QR indisponible hors-ligne au 1ᵉ lancement</div>`; },
+
+  /* ---------- impression / partage du ticket ---------- */
+  printTicket(id){
+    const b=DB.get("bookings",[]).find(x=>x.id===id); if(!b) return;
+    const u=this.currentUser();
+    const link=this.appUrl()+"#t="+b.id;
+    const qr=this.qrDataURL(link, 6);
+    const area=document.getElementById("print-area");
+    area.innerHTML=`<div style="max-width:360px;margin:0 auto;font-family:Arial,sans-serif;color:#111;text-align:center">
+      <div style="font-size:20px;font-weight:800;letter-spacing:.12em">WASSIM COIFF</div>
+      <div style="font-size:11px;letter-spacing:.2em;color:#7B1E3A;text-transform:uppercase">Le Grénat · ${this.t("ticket_label")}</div>
+      <hr style="border:none;border-top:1px dashed #999;margin:14px 0"/>
+      <div style="font-size:26px;font-weight:700">${b.icon} ${this.bName(b)}</div>
+      <div style="margin:6px 0;font-size:14px">${u?u.nom:""}${u&&u.tel?" · "+u.tel:""}</div>
+      <div style="font-size:14px">${b.gratuit?this.t("price_free"):this.fmtMoney(b.prix)} · ⏱ ${this.fmtDur(b.duree)}</div>
+      ${qr?`<img src="${qr}" style="width:180px;height:180px;margin-top:14px"/>`:""}
+      <div style="font-size:12px;color:#555;margin-top:8px">${this.t("follow_qr")}</div>
+      <div style="font-size:11px;color:#999;margin-top:6px;word-break:break-all">${link}</div>
+    </div>`;
+    setTimeout(()=>{ window.print(); }, 60);
+  },
+  async shareTicket(id){
+    const b=DB.get("bookings",[]).find(x=>x.id===id); if(!b) return;
+    const link=this.appUrl()+"#t="+b.id;
+    const txt=`${this.t("ticket_label")} — ${this.bName(b)} · Wassim Coiff`;
+    if(navigator.share){ try{ await navigator.share({title:"Wassim Coiff", text:txt, url:link}); this.toast(this.t("t_share_done")); }catch(e){} }
+    else { this.copyText(link); }
+  },
+  copyText(t){ try{ navigator.clipboard.writeText(t); this.toast(this.t("t_copied")); }catch(e){
+    const ta=document.createElement("textarea"); ta.value=t; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); this.toast(this.t("t_copied")); }catch(_){}
+    document.body.removeChild(ta); } },
+  copyAppUrl(){ this.copyText(this.appUrl()); },
+
+  /* ---------- installation (PWA) ---------- */
+  updateInstallText(){
+    const c=document.getElementById("install-txt-client"); if(c) c.innerHTML=this.t("install_client");
+    const a=document.getElementById("install-txt-admin"); if(a) a.innerHTML=this.t("install_admin");
+  },
+  refreshInstall(){
+    const show=!!this.deferredPrompt;
+    ["install-client","install-admin"].forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.toggle("show", show); });
+  },
+  async promptInstall(){
+    if(!this.deferredPrompt) return;
+    this.deferredPrompt.prompt();
+    try{ await this.deferredPrompt.userChoice; }catch(e){}
+    this.deferredPrompt=null; this.refreshInstall();
+  },
+
+  /* file : ordre + calcul d'attente */
+  rank(b){ return b.statut==="encours"?0:b.statut==="valide"?1:2; },
+  activeQueue(){
+    return DB.get("bookings",[]).filter(b=>b.jour===this.today() && ["attente","valide","encours"].includes(b.statut))
+      .sort((a,b)=>this.rank(a)-this.rank(b)||a.createdAt-b.createdAt);
+  },
+  computeWait(id){
+    const q=this.activeQueue(); const idx=q.findIndex(b=>b.id===id); const ahead=q.slice(0,idx); let w=0;
+    ahead.forEach(b=>{ if(b.statut==="encours") w+=Math.max(0,(b.endAt||0)-Date.now()); else w+=b.duree*60000; });
+    return {peopleAhead:ahead.length, waitMs:w};
+  },
+
+  /* =================== CLIENT : MON TOUR =================== */
+  renderMyTurn(){
+    const w=document.getElementById("myturn-content"); if(!w) return;
+    const u=this.currentUser(); if(!u) return;
+    const b=DB.get("bookings",[]).find(x=>x.userId===u.id && x.jour===this.today() && ["attente","valide","encours"].includes(x.statut));
+    if(!b){
+      const q=this.activeQueue();
+      const serving=q.find(x=>x.statut==="encours");
+      const waitingCount=q.filter(x=>x.statut!=="encours").length;
+      let totalWait=0; q.forEach(x=>{ totalWait += x.statut==="encours" ? Math.max(0,(x.endAt||0)-Date.now()) : x.duree*60000; });
+      const overview=`<div class="card" style="margin-bottom:14px">
+        <div class="tk-label" style="color:var(--brass-soft)">${this.t("home_overview")}</div>
+        <div class="stat-row" style="margin-top:12px">
+          <div class="stat"><div class="n" style="color:var(--garnet-soft)">${serving?1:0}</div><div class="l">${this.t("home_serving")}</div></div>
+          <div class="stat"><div class="n">${waitingCount}</div><div class="l">${this.t("home_waiting")}</div></div>
+        </div>
+        <div class="divider"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <span class="hint">${this.t("home_est_if_book")}</span>
+          <span class="price">${q.length? "≈ "+this.fmtDur(Math.round(totalWait/60000)) : "—"}</span>
+        </div></div>`;
+      w.innerHTML=this.statusBannerHTML()+overview+`<div class="card empty"><div class="ic">🎟️</div>
+        <div style="font-family:var(--display);font-size:1.2rem;color:var(--cream)">${this.t("no_booking")}</div>
+        <p class="mt-s">${this.t("no_booking_hint")}</p>
+        <button class="btn btn-primary mt" onclick="App.showTab('tab-services','client-nav')">${this.t("reserve_cta")}</button></div>`;
+      return;
+    }
+
+    let body="";
+    if(b.statut==="encours"){
+      const total=b.duree*60000, remain=Math.max(0,(b.endAt||0)-Date.now());
+      const pct=Math.min(100,Math.round(((total-remain)/total)*100));
+      body=`<div class="center"><div class="tk-label">${this.t("in_progress_you")}</div>
+        <div class="bignum">${this.fmtClock(remain)}<small> ${this.t("remaining")}</small></div></div>
+        <div class="progress mt"><span style="width:${pct}%"></span></div>`;
+    } else {
+      const {peopleAhead,waitMs}=this.computeWait(b.id);
+      body=`<div class="center"><div class="bignum">${peopleAhead}<small> ${peopleAhead<=1?"👤":"👥"}</small></div>
+        <div class="tk-label" style="margin-top:6px">${this.t("people_ahead_n")(peopleAhead)}</div></div>
+        <div class="perf"></div>
+        <div class="tk-grid">
+          <div class="tk-cell"><div class="k">${this.t("est_wait")}</div><div class="v">≈ ${this.fmtDur(Math.round(waitMs/60000))}</div></div>
+          <div class="tk-cell"><div class="k">${this.t("status_"+b.statut)}</div><div class="v" style="color:var(--garnet)">${b.statut==="valide"?"✓":"…"}</div></div>
+        </div>`;
+    }
+    const link=this.appUrl()+"#t="+b.id;
+    const priceLine = b.gratuit
+      ? `<span class="tag-free">🎁 ${this.t("price_free")}</span>`
+      : (b.remisePct ? `<span class="was" style="display:inline-block">${b.prixBase} ${this.t("dt")}</span> <b>${this.fmtMoney(b.prix)}</b> <span class="tag-promo">−${b.remisePct}%</span>` : `<b>${this.fmtMoney(b.prix)}</b>`);
+    w.innerHTML=this.statusBannerHTML()
+      +`<div class="ticket"><div class="tk-top">
+        <div><div class="tk-label">${this.t("ticket_label")}</div><div class="tk-svc">${b.icon} ${this.bName(b)}</div>
+          <div style="margin-top:6px;font-size:.9rem">${priceLine} · ⏱ ${this.fmtDur(b.duree)}</div></div>
+        <span class="tk-status st-${b.statut}">${this.t("status_"+b.statut)}</span></div>
+      <div class="perf"></div>${body}
+      <div class="divider"></div>
+      <div class="qr-box">${this.qrImg(link,5)}<div class="cap">${this.t("follow_qr")}</div></div></div>
+      <div class="ticket-actions">
+        <button class="btn btn-ghost btn-block" onclick="App.printTicket('${b.id}')">🖨 ${this.t("print_ticket")}</button>
+        <button class="btn btn-ghost btn-block" onclick="App.shareTicket('${b.id}')">↗ ${this.t("share_ticket")}</button>
+      </div>
+      ${b.statut!=="encours"?`<button class="btn btn-danger btn-block mt" onclick="App.cancelBooking('${b.id}')">${this.t("cancel")}</button>`:""}`;
+  },
+  cancelBooking(id){ this._setStatut(id,"annule"); this.toast(this.t("t_cancelled")); this.renderMyTurn(); },
+
+  /* =================== ADMIN : FILE =================== */
+  renderQueue(){
+    const w=document.getElementById("queue-content"); if(!w) return;
+    const q=this.activeQueue();
+    if(q.length===0){ w.innerHTML=`<div class="card empty"><div class="ic">🪑</div><div>${this.t("empty_queue")}</div></div>`; return; }
+    const hasCur=q.some(x=>x.statut==="encours");
+    w.innerHTML=q.map((b,i)=>{
+      const cur=b.statut==="encours";
+      let sub=`${b.icon} ${this.bName(b)} · ${this.fmtMoney(b.prix)} · ⏱ ${this.fmtDur(b.duree)}`;
+      if(cur){ const r=Math.max(0,(b.endAt||0)-Date.now()); sub+=` · <strong style="color:var(--garnet-soft)">${this.t("ends_in")} ${this.fmtClock(r)}</strong>`; }
+      let a="";
+      if(b.statut==="attente") a+=`<button class="btn btn-ok btn-sm" onclick="App.validate('${b.id}')">${this.t("validate")}</button>`;
+      else if(b.statut==="valide" && !hasCur) a+=`<button class="btn btn-primary btn-sm" onclick="App.start('${b.id}')">${this.t("start")}</button>`;
+      else if(cur) a+=`<button class="btn btn-brass btn-sm" onclick="App.finish('${b.id}')">${this.t("finish")}</button>`;
+      a+=`<button class="btn btn-ghost btn-sm" onclick="App.editTime('${b.id}')">⏱ ${this.t("edit_time")}</button>`;
+      if(!cur) a+=`<button class="btn btn-danger btn-sm" onclick="App.adminCancel('${b.id}')">✕</button>`;
+      return `<div class="queue-row ${cur?"is-encours":""}"><div class="pos">${cur?"✂️":i+1}</div>
+        <div><div class="who">${b.clientNom}</div><div class="sub">${sub}</div></div>
+        <div class="acts">${a}</div></div>`;
+    }).join("");
+  },
+  validate(id){ this._setStatut(id,"valide"); this.toast(this.t("t_validated")); },
+  start(id){ const bs=DB.get("bookings",[]); const b=bs.find(x=>x.id===id); if(!b) return;
+    b.statut="encours"; b.startAt=Date.now(); b.endAt=Date.now()+b.duree*60000; DB.set("bookings",bs); this.toast(this.t("t_started")); this.renderQueue(); },
+  finish(id){ const bs=DB.get("bookings",[]); const b=bs.find(x=>x.id===id); if(!b) return;
+    b.statut="termine"; b.finishedAt=Date.now(); b.encaisse=false; DB.set("bookings",bs); this.toast(this.t("t_finished")); this.renderQueue(); },
+  editTime(id){ const bs=DB.get("bookings",[]); const b=bs.find(x=>x.id===id); if(!b) return;
+    const v=window.prompt(this.t("new_duration"), b.duree); if(v===null) return; const m=parseInt(v,10); if(isNaN(m)||m<=0) return;
+    b.duree=m; if(b.statut==="encours"&&b.startAt) b.endAt=b.startAt+m*60000; DB.set("bookings",bs); this.toast(this.t("t_time_saved")); this.renderQueue(); },
+  adminCancel(id){ this._setStatut(id,"annule"); this.renderQueue(); },
+  _setStatut(id,st){ const bs=DB.get("bookings",[]); const b=bs.find(x=>x.id===id); if(b){ b.statut=st; DB.set("bookings",bs); } },
+
+  /* =================== ADMIN : CAISSE =================== */
+  renderCash(){
+    const w=document.getElementById("cash-content"); if(!w) return;
+    const bs=DB.get("bookings",[]);
+    const open=bs.filter(b=>b.jour===this.today() && b.statut==="termine" && !b.encaisse);
+    const total=open.reduce((s,b)=>s+b.prix,0), nb=open.length, avg=nb?Math.round(total/nb):0;
+    const caisses=DB.get("caisses",[]); const byDay={};
+    caisses.forEach(c=>{ if(!byDay[c.jour]) byDay[c.jour]={total:0,nb:0}; byDay[c.jour].total+=c.total; byDay[c.jour].nb+=c.nb; });
+    const days=Object.keys(byDay).sort().reverse();
+    w.innerHTML=`<div class="card cash-hero">
+        <div class="tk-label" style="color:var(--brass-soft)">${this.t("today_total")}</div>
+        <div class="amt">${total}<small> ${this.t("dt")}</small></div>
+        <div class="stat-row"><div class="stat"><div class="n">${nb}</div><div class="l">${this.t("services_done")}</div></div>
+          <div class="stat"><div class="n">${avg} ${this.t("dt")}</div><div class="l">${this.t("avg_ticket")}</div></div></div>
+        <button class="btn btn-brass btn-block" onclick="App.closeRegister()" ${nb===0?"disabled":""}>🔒 ${this.t("close_register")}</button>
+        ${nb===0?`<p class="hint mt-s">${this.t("nothing_to_cash")}</p>`:""}</div>
+      <div class="section-head mt"><h2 style="font-size:1.05rem">${this.t("history")}</h2></div>
+      ${days.length===0?`<div class="card empty"><div class="ic">📒</div><div>${this.t("no_history")}</div></div>`
+        :days.map(j=>`<div class="hist-row"><div><div class="d">${this.fmtDate(j)}</div><div class="hint">${byDay[j].nb} ${this.t("services_done")}</div></div>
+          <div class="t">${byDay[j].total} ${this.t("dt")}</div></div>`).join("")}`;
+  },
+  closeRegister(){
+    if(!window.confirm(this.t("confirm_close"))) return;
+    const bs=DB.get("bookings",[]); const open=bs.filter(b=>b.jour===this.today() && b.statut==="termine" && !b.encaisse);
+    if(open.length===0) return; const total=open.reduce((s,b)=>s+b.prix,0); open.forEach(b=>b.encaisse=true); DB.set("bookings",bs);
+    const caisses=DB.get("caisses",[]); caisses.push({jour:this.today(),total,nb:open.length,ts:Date.now()}); DB.set("caisses",caisses);
+    this.toast(this.t("t_closed")); this.renderCash();
+  },
+
+  /* =================== ADMIN : PRESTATIONS (CRUD) =================== */
+  openSvcForm(id){ this.svcFormOpen=true; this.svcEditId=id||null; this.renderSvcAdmin(); },
+  closeSvcForm(){ this.svcFormOpen=false; this.svcEditId=null; this.renderSvcAdmin(); },
+  renderSvcAdmin(){
+    const w=document.getElementById("svc-admin-content"); if(!w) return;
+    const list=this.services();
+    let form="";
+    if(this.svcFormOpen){
+      const s=this.svcEditId?this.svc(this.svcEditId):{icon:"✂️",fr:"",ar:"",prix:"",duree:"",dfr:"",dar:""};
+      form=`<div class="card mt-s" style="margin-bottom:16px">
+        <div class="tk-label" style="color:var(--brass-soft);margin-bottom:10px">${this.svcEditId?this.t("edit_service"):this.t("new_service")}</div>
+        <div class="two-col">
+          <div class="field"><label>${this.t("svc_icon")}</label><input class="input" id="sf-icon" value="${s.icon||""}" /></div>
+          <div class="field"><label>${this.t("svc_price")}</label><input class="input" id="sf-prix" type="number" inputmode="numeric" value="${s.prix}" /></div>
+        </div>
+        <div class="field"><label>${this.t("svc_name_fr")}</label><input class="input" id="sf-fr" value="${s.fr||""}" /></div>
+        <div class="field"><label>${this.t("svc_name_ar")}</label><input class="input" id="sf-ar" dir="rtl" value="${s.ar||""}" /></div>
+        <div class="field"><label>${this.t("svc_duration")}</label><input class="input" id="sf-duree" type="number" inputmode="numeric" value="${s.duree}" /></div>
+        <div class="field"><label>${this.t("svc_desc_fr")}</label><input class="input" id="sf-dfr" value="${s.dfr||""}" /></div>
+        <div class="field"><label>${this.t("svc_desc_ar")}</label><input class="input" id="sf-dar" dir="rtl" value="${s.dar||""}" /></div>
+        <div class="two-col">
+          <button class="btn btn-ghost" onclick="App.closeSvcForm()">${this.t("cancel_btn")}</button>
+          <button class="btn btn-brass" onclick="App.saveService()">${this.t("save")}</button>
+        </div></div>`;
+    }
+    const rows=list.map(s=>`<div class="queue-row">
+        <div class="pos">${s.icon}</div>
+        <div><div class="who">${this.svcName(s)}</div><div class="sub">${this.fmtMoney(s.prix)} · ⏱ ${this.fmtDur(s.duree)}</div></div>
+        <div class="acts">
+          <button class="btn btn-ghost btn-sm" onclick="App.openSvcForm('${s.id}')">${this.t("edit")}</button>
+          <button class="btn btn-danger btn-sm" onclick="App.deleteService('${s.id}')">${this.t("del")}</button>
+        </div></div>`).join("");
+    w.innerHTML=form+rows;
+  },
+  saveService(){
+    const g=id=>document.getElementById(id).value.trim();
+    const icon=g("sf-icon")||"✂️", fr=g("sf-fr"), ar=g("sf-ar"), dfr=g("sf-dfr"), dar=g("sf-dar");
+    const prix=parseInt(g("sf-prix"),10), duree=parseInt(g("sf-duree"),10);
+    if(!fr||!ar||isNaN(prix)||isNaN(duree)) return this.toast(this.t("t_fill"));
+    const services=this.services();
+    if(this.svcEditId){ const s=services.find(x=>x.id===this.svcEditId); Object.assign(s,{icon,fr,ar,dfr,dar,prix,duree}); }
+    else { services.push({id:"s"+Date.now(), icon, fr, ar, dfr, dar, prix, duree}); }
+    DB.set("services",services); this.toast(this.t("t_saved")); this.closeSvcForm();
+  },
+  deleteService(id){ if(!window.confirm(this.t("confirm_del_svc"))) return;
+    DB.set("services", this.services().filter(s=>s.id!==id)); this.toast(this.t("t_svc_deleted")); this.renderSvcAdmin(); },
+
+  /* =================== ADMIN : UTILISATEURS (CRUD) =================== */
+  renderUsers(){
+    const w=document.getElementById("users-content"); if(!w) return;
+    const users=DB.get("users",[]); const me=this.currentUser();
+    const adminCount=users.filter(u=>u.role==="admin").length;
+    const addForm=`<div class="card" style="margin-bottom:16px">
+        <div class="tk-label" style="color:var(--brass-soft);margin-bottom:10px">${this.t("add_admin")}</div>
+        <div class="field"><label>${this.t("name_label")}</label><input class="input" id="au-name" /></div>
+        <div class="field"><label>${this.t("username_label")}</label><input class="input" id="au-user" /></div>
+        <div class="field"><label>${this.t("password_label")}</label><input class="input" id="au-pass" type="text" /></div>
+        <button class="btn btn-brass btn-block" onclick="App.addAdmin()">${this.t("add")}</button>
+      </div>`;
+    const rows=users.map(u=>{
+      const isMe=me&&u.id===me.id;
+      const canDel=!isMe && !(u.role==="admin"&&adminCount<=1);
+      return `<div class="queue-row">
+        <div class="pos">${u.role==="admin"?"★":"👤"}</div>
+        <div><div class="who">${u.nom||u.username} ${isMe?`<span class="badge badge-admin">${this.t("you_badge")}</span>`:""}</div>
+          <div class="sub">${u.username} · <span class="badge ${u.role==="admin"?"badge-admin":"badge-client"}">${this.t("role_"+u.role)}</span></div></div>
+        <div class="acts">
+          <button class="btn btn-ghost btn-sm" onclick="App.changePassword('${u.id}')">🔑</button>
+          <button class="btn btn-danger btn-sm" onclick="App.deleteUser('${u.id}')" ${canDel?"":"disabled"}>✕</button>
+        </div></div>`;
+    }).join("");
+    w.innerHTML=addForm+(users.length?rows:`<div class="card empty"><div class="ic">👥</div><div>${this.t("no_clients")}</div></div>`);
+  },
+  addAdmin(){
+    const nom=document.getElementById("au-name").value.trim();
+    const user=this.normPhone(document.getElementById("au-user").value);
+    const pass=document.getElementById("au-pass").value.trim();
+    if(!nom||!user||!pass) return this.toast(this.t("t_fill"));
+    const users=DB.get("users",[]);
+    if(users.some(u=>u.username===user)) return this.toast(this.t("t_id_taken"));
+    users.push({id:"u"+Date.now(), role:"admin", username:user, password:pass, nom, tel:"", createdAt:Date.now()});
+    DB.set("users",users); this.toast(this.t("t_user_added")); this.renderUsers();
+  },
+  changePassword(id){
+    const users=DB.get("users",[]); const u=users.find(x=>x.id===id); if(!u) return;
+    const v=window.prompt(this.t("new_password"), ""); if(v===null||!v.trim()) return;
+    u.password=v.trim(); DB.set("users",users); this.toast(this.t("t_saved"));
+  },
+  deleteUser(id){
+    const users=DB.get("users",[]); const u=users.find(x=>x.id===id); if(!u) return;
+    if(u.role==="admin" && users.filter(x=>x.role==="admin").length<=1) return this.toast(this.t("t_last_admin"));
+    if(!window.confirm(this.t("confirm_del_user"))) return;
+    DB.set("users", users.filter(x=>x.id!==id)); this.toast(this.t("t_user_deleted")); this.renderUsers();
+  },
+
+  /* =================== AVIS =================== */
+  buildStarInput(){ const el=document.getElementById("star-input"); if(!el) return;
+    el.innerHTML=[1,2,3,4,5].map(n=>`<button data-n="${n}" onclick="App.setStars(${n})">★</button>`).join(""); this.paintStars(); },
+  setStars(n){ this.reviewStars=n; this.paintStars(); },
+  paintStars(){ document.querySelectorAll("#star-input button").forEach(b=>b.classList.toggle("on", +b.dataset.n<=this.reviewStars)); },
+  submitReview(){
+    if(this.reviewStars<1) return this.toast(this.t("review_need_text"));
+    const u=this.currentUser(); const texte=document.getElementById("review-text").value.trim();
+    const avis=DB.get("avis",[]); avis.push({id:"a"+Date.now(), userId:u.id, nom:u.nom, note:this.reviewStars, texte, ts:Date.now()});
+    DB.set("avis",avis); document.getElementById("review-text").value=""; this.reviewStars=0; this.paintStars();
+    this.toast(this.t("thanks_review")); this.renderReviews();
+  },
+  reviewsHTML(admin){
+    const avis=DB.get("avis",[]).slice().reverse();
+    const visible=avis.filter(a=>a.approuve!==false);
+    let summary;
+    if(visible.length){
+      const avg=visible.reduce((s,a)=>s+a.note,0)/visible.length;
+      const full=Math.round(avg); const rs="★".repeat(full)+"☆".repeat(5-full);
+      summary=`<div class="rating-summary"><div class="avg">${avg.toFixed(1)}<small>/5</small></div>
+        <div><div class="rs-stars">${rs}</div><div class="rs-count">${this.t("reviews_count")(visible.length)}</div></div></div>`;
+    } else {
+      summary=`<div class="rating-summary"><div class="rs-count">${this.t("no_rating_yet")}</div></div>`;
+    }
+    const list = admin ? avis : visible;
+    if(list.length===0) return summary+`<div class="card empty"><div class="ic">⭐</div><div>${this.t("no_reviews")}</div></div>`;
+    const items=list.map(a=>{
+      const stars="★".repeat(a.note)+"☆".repeat(5-a.note);
+      const d=new Date(a.ts).toLocaleDateString(this.lang==="ar"?"ar-TN":"fr-FR",{day:"numeric",month:"short",year:"numeric"});
+      const hidden=a.approuve===false;
+      const reply=a.reponse?`<div class="reply"><div class="who">${this.t("salon_reply")}</div><div class="txt">${this.escape(a.reponse)}</div></div>`:"";
+      const ctrls=admin?`<span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" onclick="App.replyReview('${a.id}')">↩ ${this.t("reply_label")}</button>
+          <button class="btn btn-ghost btn-sm" onclick="App.toggleReview('${a.id}')">${hidden?this.t("show_review"):this.t("hide_review")}</button>
+          <button class="btn btn-danger btn-sm" onclick="App.deleteReview('${a.id}')">✕</button></span>`:"";
+      return `<div class="review ${hidden?"hidden-rev":""}"><div class="head"><span class="who">${this.escape(a.nom)}</span>
+          <span style="display:flex;gap:8px;align-items:center"><span class="rstars">${stars}</span>${ctrls}</span></div>
+        ${a.texte?`<div class="txt">${this.escape(a.texte)}</div>`:""}<div class="dt">${d}</div>${reply}</div>`;
+    }).join("");
+    return summary+items;
+  },
+  renderReviews(){
+    const c=document.getElementById("reviews-list"); if(c) c.innerHTML=this.reviewsHTML(false);
+    const a=document.getElementById("areviews-list"); if(a) a.innerHTML=this.reviewsHTML(true);
+    this.buildStarInput();
+  },
+  replyReview(id){
+    const avis=DB.get("avis",[]); const a=avis.find(x=>x.id===id); if(!a) return;
+    const v=window.prompt(this.t("reply_ph"), a.reponse||""); if(v===null) return;
+    a.reponse=v.trim(); DB.set("avis",avis); this.toast(this.t("t_replied")); this.renderReviews();
+  },
+  toggleReview(id){
+    const avis=DB.get("avis",[]); const a=avis.find(x=>x.id===id); if(!a) return;
+    a.approuve = a.approuve===false ? true : false;
+    DB.set("avis",avis); this.toast(this.t(a.approuve===false?"t_hidden":"t_shown")); this.renderReviews();
+  },
+  deleteReview(id){ if(!window.confirm(this.t("confirm_del_review"))) return;
+    DB.set("avis", DB.get("avis",[]).filter(a=>a.id!==id)); this.toast(this.t("t_review_deleted")); this.renderReviews(); },
+  escape(s){ const d=document.createElement("div"); d.textContent=s||""; return d.innerHTML; },
+
+  /* =================== STATISTIQUES =================== */
+  renderStats(){
+    const w=document.getElementById("stats-content"); if(!w) return;
+    const all=DB.get("bookings",[]).filter(b=>b.statut==="termine");
+    if(all.length===0){ w.innerHTML=`<div class="card empty"><div class="ic">📊</div><div>${this.t("stats_empty")}</div></div>`; return; }
+    const now=new Date();
+    const startToday=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
+    const weekAgo=startToday-6*86400000;
+    const startMonth=new Date(now.getFullYear(),now.getMonth(),1).getTime();
+    const ts=b=>b.finishedAt||b.createdAt||0;
+    const sum=arr=>arr.reduce((s,b)=>s+(b.prix||0),0);
+    const weekB=all.filter(b=>ts(b)>=weekAgo), monthB=all.filter(b=>ts(b)>=startMonth);
+    const clients=new Set(all.map(b=>b.userId)).size;
+    const cards=`<div class="stat-cards">
+      <div class="stat-card"><div class="lbl">${this.t("stat_week")}</div><div class="big">${sum(weekB)}<small> ${this.t("dt")}</small></div><div class="sub">${weekB.length} ${this.t("services_done")}</div></div>
+      <div class="stat-card"><div class="lbl">${this.t("stat_month")}</div><div class="big">${sum(monthB)}<small> ${this.t("dt")}</small></div><div class="sub">${monthB.length} ${this.t("services_done")}</div></div>
+      <div class="stat-card"><div class="lbl">${this.t("stat_total")}</div><div class="big">${sum(all)}<small> ${this.t("dt")}</small></div><div class="sub">${all.length} ${this.t("services_done")}</div></div>
+      <div class="stat-card"><div class="lbl">${this.t("stat_clients")}</div><div class="big">${clients}</div></div></div>`;
+    const byId={};
+    all.forEach(b=>{ const k=b.serviceId||b.nom_fr; (byId[k]=byId[k]||{n:0,icon:b.icon,name:this.bName(b)}).n++; });
+    const top=Object.values(byId).sort((a,b)=>b.n-a.n).slice(0,5);
+    const maxN=Math.max(...top.map(x=>x.n),1);
+    const topHTML=`<div class="card set-card"><div class="hd">🏆 ${this.t("stat_top")}</div><div class="bar-list">${
+      top.map(x=>`<div class="bar-item"><div class="top"><span>${x.icon} ${this.escape(x.name)}</span><span class="v">${this.t("times_label")(x.n)}</span></div>
+        <div class="bar-track brass"><span style="width:${Math.round(x.n/maxN*100)}%"></span></div></div>`).join("")}</div></div>`;
+    const hrs=new Array(24).fill(0);
+    all.forEach(b=>{ hrs[new Date(b.startAt||b.createdAt||0).getHours()]++; });
+    let lo=24,hi=0; hrs.forEach((c,h)=>{ if(c>0){ lo=Math.min(lo,h); hi=Math.max(hi,h); } });
+    if(lo>hi){ lo=9; hi=19; } lo=Math.max(0,lo-1); hi=Math.min(23,hi+1);
+    const maxH=Math.max(...hrs,1); let bars="";
+    for(let h=lo;h<=hi;h++){ const c=hrs[h], peak=(c===maxH&&c>0);
+      bars+=`<div class="hbar ${peak?"peak":""}"><div class="col" style="height:${c?Math.round(c/maxH*100):0}%"></div><div class="hr">${h}h</div></div>`; }
+    const peakHTML=`<div class="card set-card"><div class="hd">⏰ ${this.t("stat_peak")}</div><div class="hours-bars">${bars}</div></div>`;
+    w.innerHTML=cards+topHTML+peakHTML;
+  },
+
+  /* =================== RÉGLAGES =================== */
+  renderSettings(){
+    const w=document.getElementById("settings-content"); if(!w) return;
+    const H=this.hours(), P=DB.get("promo",DEFAULT_PROMO), L=DB.get("loyalty",DEFAULT_LOYALTY);
+    const url=this.appUrl();
+    if(this._promoDaysSel===null) this._promoDaysSel=(P.days||[]).slice();
+    const dabbr=this.t("days_abbr"), dfull=this.t("days_full"), order=[1,2,3,4,5,6,0];
+
+    const share=`<div class="card set-card"><div class="hd">📲 ${this.t("set_share")}</div>
+      <div class="qr-box">${this.qrImg(url,6)}<div class="cap">${this.t("set_share_hint")}</div></div>
+      <div class="url-row"><div class="u">${this.escape(url)}</div><button class="btn btn-ghost btn-sm" onclick="App.copyAppUrl()">${this.t("copy")}</button></div>
+      <div class="field" style="margin-top:10px"><label>${this.t("set_url_label")}</label>
+        <input id="set-appurl" type="url" placeholder="https://…" value="${this.escape(DB.get('settings',DEFAULT_SETTINGS).appUrl||'')}"></div>
+      <button class="btn btn-brass btn-block" onclick="App.saveAppUrl()">${this.t("save")}</button></div>`;
+
+    const rows=order.map(i=>{
+      const d=H.days[i]||H.days[String(i)]||{open:false,from:"09:00",to:"19:00",bfrom:"",bto:""};
+      return `<div class="day-row" data-day="${i}">
+        <label class="day-name" style="display:flex;align-items:center;gap:8px">
+          <span class="switch"><input type="checkbox" class="d-open" ${d.open?"checked":""} onchange="this.closest('.day-row').querySelector('.day-times').classList.toggle('off',!this.checked)"><span class="slider-sw"></span></span>${dfull[i]}</label>
+        <div class="day-times ${d.open?"":"off"}">
+          <div class="time-field"><span>${this.t("h_open")}</span><input type="time" class="d-from" value="${d.from||'09:00'}"></div>
+          <div class="time-field"><span>${this.t("h_close")}</span><input type="time" class="d-to" value="${d.to||'19:00'}"></div>
+          <div class="time-field"><span>${this.t("h_break_from")}</span><input type="time" class="d-bfrom" value="${d.bfrom||''}"></div>
+          <div class="time-field"><span>${this.t("h_break_to")}</span><input type="time" class="d-bto" value="${d.bto||''}"></div>
+        </div></div>`;
+    }).join("");
+    const hours=`<div class="card set-card"><div class="hd">🕒 ${this.t("set_hours")}</div>${rows}
+      <button class="btn btn-brass btn-block" style="margin-top:14px" onclick="App.saveHours()">${this.t("save_hours")}</button></div>`;
+
+    const fl=(H.feries||[]).slice().sort();
+    const feries=`<div class="card set-card"><div class="hd">📅 ${this.t("set_holidays")}</div>
+      ${fl.length?fl.map(f=>`<div class="ferie-row"><span class="d">${this.fmtDate(f)}</span><button class="btn btn-ghost btn-sm" onclick="App.removeHoliday('${f}')">✕</button></div>`).join("")
+        :`<div class="hint">${this.t("no_holidays")}</div>`}
+      <div class="inline-add"><input type="date" id="ferie-input"><button class="btn btn-brass btn-sm" onclick="App.addHoliday()">${this.t("add_holiday")}</button></div></div>`;
+
+    const days=order.map(i=>`<button class="${this._promoDaysSel.includes(i)?"on":""}" onclick="App.togglePromoDay(${i})">${dabbr[i]}</button>`).join("");
+    const promo=`<div class="card set-card"><div class="hd">🎉 ${this.t("set_promo")}</div>
+      <div class="toggle-line"><div class="tl-txt">${this.t("promo_enable")}<small>${this.t("promo_enable_sub")}</small></div>
+        <label class="switch"><input type="checkbox" id="promo-active" ${P.active?"checked":""}><span class="slider-sw"></span></label></div>
+      <div class="field"><label>${this.t("promo_percent")}</label><input type="number" id="promo-percent" min="1" max="90" value="${P.percent}"></div>
+      <div class="field"><label>${this.t("promo_days")}</label><div class="daypick" id="promo-daypick">${days}</div></div>
+      <button class="btn btn-brass btn-block" onclick="App.savePromo()">${this.t("save_promo")}</button></div>`;
+
+    const loyalty=`<div class="card set-card"><div class="hd">🎁 ${this.t("set_loyalty")}</div>
+      <div class="toggle-line"><div class="tl-txt">${this.t("loyalty_enable")}<small>${this.t("loyalty_enable_sub")}</small></div>
+        <label class="switch"><input type="checkbox" id="loyalty-active" ${L.active?"checked":""}><span class="slider-sw"></span></label></div>
+      <div class="field"><label>${this.t("loyalty_every")}</label><input type="number" id="loyalty-every" min="2" max="50" value="${L.every}"></div>
+      <button class="btn btn-brass btn-block" onclick="App.saveLoyalty()">${this.t("save_loyalty")}</button></div>`;
+
+    w.innerHTML=share+hours+feries+promo+loyalty;
+  },
+  saveAppUrl(){ const v=document.getElementById("set-appurl").value.trim();
+    const s=DB.get("settings",DEFAULT_SETTINGS); s.appUrl=v; DB.set("settings",s); this.toast(this.t("t_saved")); this.renderSettings(); },
+  saveHours(){
+    const H=this.hours();
+    document.querySelectorAll("#settings-content .day-row").forEach(row=>{
+      const i=row.dataset.day;
+      H.days[i]={ open:row.querySelector(".d-open").checked,
+        from:row.querySelector(".d-from").value||"09:00", to:row.querySelector(".d-to").value||"19:00",
+        bfrom:row.querySelector(".d-bfrom").value||"", bto:row.querySelector(".d-bto").value||"" };
+    });
+    DB.set("hours",H); this.toast(this.t("t_hours_saved")); this.renderAll();
+  },
+  addHoliday(){ const v=document.getElementById("ferie-input").value; if(!v) return;
+    const H=this.hours(); H.feries=H.feries||[]; if(!H.feries.includes(v)) H.feries.push(v);
+    DB.set("hours",H); this.toast(this.t("t_holiday_added")); this.renderSettings(); this.renderMyTurn(); this.renderServices(); },
+  removeHoliday(d){ const H=this.hours(); H.feries=(H.feries||[]).filter(x=>x!==d);
+    DB.set("hours",H); this.toast(this.t("t_holiday_removed")); this.renderSettings(); this.renderMyTurn(); this.renderServices(); },
+  togglePromoDay(i){ this._promoDaysSel=this._promoDaysSel||[];
+    const k=this._promoDaysSel.indexOf(i); if(k>=0) this._promoDaysSel.splice(k,1); else this._promoDaysSel.push(i);
+    const order=[1,2,3,4,5,6,0];
+    document.querySelectorAll("#promo-daypick button").forEach((btn,idx)=>btn.classList.toggle("on", this._promoDaysSel.includes(order[idx]))); },
+  savePromo(){ const P=DB.get("promo",DEFAULT_PROMO);
+    P.active=document.getElementById("promo-active").checked;
+    P.percent=Math.max(1,Math.min(90, parseInt(document.getElementById("promo-percent").value,10)||10));
+    P.days=(this._promoDaysSel||[]).slice().sort((a,b)=>a-b);
+    DB.set("promo",P); this.toast(this.t("t_promo_saved")); this.renderAll(); },
+  saveLoyalty(){ const L=DB.get("loyalty",DEFAULT_LOYALTY);
+    L.active=document.getElementById("loyalty-active").checked;
+    L.every=Math.max(2,Math.min(50, parseInt(document.getElementById("loyalty-every").value,10)||10));
+    DB.set("loyalty",L); this.toast(this.t("t_loyalty_saved")); this.renderAll(); },
+
+  /* =================== RENDU GLOBAL + HORLOGE =================== */
+  renderAll(){
+    this.renderServices(); this.renderMyTurn(); this.renderQueue(); this.renderCash();
+    this.renderSvcAdmin(); this.renderUsers(); this.renderReviews();
+    this.renderStats(); this.renderSettings();
+  },
+  tick(){
+    if(!this.session) return;
+    const ct=document.getElementById("tab-myturn"), aq=document.getElementById("tab-queue");
+    const u=this.currentUser(); if(!u) return;
+    if(u.role==="client" && ct && ct.classList.contains("active")) this.renderMyTurn();
+    if(u.role==="admin" && aq && aq.classList.contains("active")) this.renderQueue();
+  },
+  toast(msg){ const el=document.getElementById("toast"); el.textContent=msg; el.classList.add("show");
+    clearTimeout(this._tt); this._tt=setTimeout(()=>el.classList.remove("show"),2600); },
+};
+
+/* branchements */
+document.addEventListener("DOMContentLoaded",()=>{
+  document.querySelectorAll("#client-nav button").forEach(b=>b.addEventListener("click",()=>App.showTab(b.dataset.tab,"client-nav")));
+  document.querySelectorAll("#admin-nav button").forEach(b=>b.addEventListener("click",()=>App.showTab(b.dataset.tab,"admin-nav")));
+  document.querySelectorAll("#auth-tabs button").forEach(b=>b.addEventListener("click",()=>App.switchAuth(b.dataset.auth)));
+  App.init();
+
+  /* PWA : bouton "installer" quand le navigateur le propose */
+  window.addEventListener("beforeinstallprompt",(e)=>{ e.preventDefault(); App.deferredPrompt=e; App.refreshInstall(); });
+  window.addEventListener("appinstalled",()=>{ App.deferredPrompt=null; App.refreshInstall(); });
+
+  /* Mode hors-ligne : enregistrement du service worker */
+  if("serviceWorker" in navigator){
+    window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+  }
+});
+</script>
+</body>
+</html>
