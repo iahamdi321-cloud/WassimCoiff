@@ -304,6 +304,38 @@ textarea{resize:vertical;min-height:80px}
 }
 #print-area{display:none}
 
+/* ---------- page À propos ---------- */
+.about-card .about-brand{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.about-card .about-brand .mark{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;flex:none;
+  background:radial-gradient(circle at 30% 25%,var(--garnet-soft),var(--garnet-deep));border:1.5px solid var(--brass)}
+.about-card .about-brand .nm{font-family:var(--display);font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:1.1rem}
+.about-card .about-brand .nm span{color:var(--brass-soft)}
+.about-card .about-brand .tg{font-size:.66rem;color:var(--muted);letter-spacing:.16em;text-transform:uppercase}
+.about-row{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.about-row .ic{font-size:18px;width:26px;text-align:center;flex:none}
+.about-row .lbl{font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.about-row .val{font-size:.98rem;color:var(--cream);text-decoration:none;display:block;margin-top:2px}
+a.val:hover{color:var(--brass-soft)}
+.about-actions{display:flex;gap:8px;margin-top:12px}
+.about-actions .btn{flex:1;text-decoration:none}
+.about-map{width:100%;height:230px;border:0;display:block}
+
+/* ---------- caisse : montant éditable + historiques ---------- */
+.cash-line{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+.cash-line:last-child{border-bottom:0}
+.cash-line .who{font-size:.9rem;font-weight:600}
+.cash-line .sub{font-size:.72rem;color:var(--muted)}
+.cash-line .amt-edit{display:flex;align-items:center;gap:8px}
+.cash-line .price-pill{font-family:var(--display);color:var(--brass-soft);font-size:1rem;white-space:nowrap}
+.tag-tip{display:inline-block;font-size:.62rem;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:999px;background:rgba(95,164,106,.18);color:#9fe0a8;margin-inline-start:6px}
+.mini-btn{border:1px solid var(--line);background:var(--bg-2);color:var(--cream-dim);border-radius:8px;width:34px;height:34px;display:grid;place-items:center;cursor:pointer;font-size:14px;transition:.15s;flex:none}
+.mini-btn:hover{border-color:var(--brass);color:var(--brass-soft)}
+.mini-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+.hist-row .row-actions{display:flex;gap:6px}
+.danger-zone{margin-top:12px}
+.btn-danger-soft{width:100%;border:1px solid rgba(194,75,75,.4);background:rgba(194,75,75,.08);color:#e7a3a3;border-radius:var(--radius);padding:11px;cursor:pointer;font-family:var(--body);font-weight:600;font-size:.86rem}
+.btn-danger-soft:hover{background:rgba(194,75,75,.16)}
+
 /* ---------- écran de connexion (boot) ---------- */
 #boot{position:fixed;inset:0;z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;
   background:radial-gradient(circle at 50% 35%,var(--garnet-deep),var(--bg));text-align:center}
@@ -382,6 +414,7 @@ textarea{resize:vertical;min-height:80px}
         <button class="on" data-tab="tab-myturn"><span class="ic">🎟️</span><span data-i18n="nav_myturn">Mon tour</span></button>
         <button data-tab="tab-services"><span class="ic">✂️</span><span data-i18n="nav_services">Carte</span></button>
         <button data-tab="tab-reviews"><span class="ic">⭐</span><span data-i18n="nav_reviews">Avis</span></button>
+        <button data-tab="tab-about-client"><span class="ic">📍</span><span data-i18n="nav_about">À propos</span></button>
       </nav>
     </div>
 
@@ -410,6 +443,10 @@ textarea{resize:vertical;min-height:80px}
       <div class="section-head mt"><h2 style="font-size:1.05rem" data-i18n="all_reviews">Avis des clients</h2></div>
       <div id="reviews-list"></div>
     </div>
+
+    <div class="screen-tab pad" id="tab-about-client">
+      <div id="about-client"></div>
+    </div>
   </section>
 
   <!-- ===== APP ADMIN ===== -->
@@ -430,6 +467,7 @@ textarea{resize:vertical;min-height:80px}
         <button data-tab="tab-users"><span class="ic">👥</span><span data-i18n="nav_users">Comptes</span></button>
         <button data-tab="tab-areviews"><span class="ic">⭐</span><span data-i18n="nav_reviews">Avis</span></button>
         <button data-tab="tab-settings"><span class="ic">⚙️</span><span data-i18n="nav_settings">Réglages</span></button>
+        <button data-tab="tab-about-admin"><span class="ic">📍</span><span data-i18n="nav_about">À propos</span></button>
       </nav>
     </div>
 
@@ -471,6 +509,10 @@ textarea{resize:vertical;min-height:80px}
     <div class="screen-tab pad" id="tab-settings">
       <div class="section-head"><div><div class="eyebrow" data-i18n="settings_eyebrow">Configuration</div><h2 data-i18n="settings_title">Réglages</h2></div></div>
       <div id="settings-content"></div>
+    </div>
+
+    <div class="screen-tab pad" id="tab-about-admin">
+      <div id="about-admin"></div>
     </div>
   </section>
 
@@ -560,6 +602,14 @@ const DB = {
       oldArr.forEach(it=>{ if(it&&it.id!=null && !seen.has(String(it.id))) this.db.collection(key).doc(String(it.id)).delete().catch(()=>{}); });
     }
   },
+
+  /* suppression explicite d'un document (utilisée pour l'historique) */
+  del(key, id){
+    if(this.isLocal(key)) return;
+    const arr=this._cache[key];
+    if(Array.isArray(arr)) this._cache[key]=arr.filter(it=>!(it&&String(it.id)===String(id)));
+    if(this.db) this.db.collection(key).doc(String(id)).delete().catch(()=>{});
+  },
 };
 
 /* Prestations par défaut (créées au premier lancement, puis modifiables par l'admin) */
@@ -592,8 +642,8 @@ const DEFAULT_HOURS = {
 const DEFAULT_PROMO = { active:false, percent:10, days:[2] };   // 2 = mardi
 /* Fidélité : la Nᵉ prestation est offerte */
 const DEFAULT_LOYALTY = { active:false, every:10 };
-/* Réglages divers (URL de l'app pour le QR, etc.) */
-const DEFAULT_SETTINGS = { appUrl:"" };
+/* Réglages divers (URL de l'app, coordonnées du salon) */
+const DEFAULT_SETTINGS = { appUrl:"", phone:"54947435", address:"" };
 
 /* =====================================================================
    TRADUCTIONS
@@ -687,6 +737,19 @@ const I18N = {
     reply_label:"Répondre", reply_ph:"Votre réponse…", salon_reply:"Réponse du salon",
     hide_review:"Masquer", show_review:"Afficher",
     t_replied:"Réponse enregistrée.", t_hidden:"Avis masqué.", t_shown:"Avis affiché.",
+    /* À propos + coordonnées */
+    nav_about:"À propos", about_eyebrow:"Le salon", about_title:"À propos",
+    about_phone:"Téléphone", about_address:"Adresse", call:"Appeler", directions:"Itinéraire",
+    about_no_address_admin:"Ajoutez l'adresse du salon dans Réglages pour afficher la carte.", go_settings:"Aller aux réglages",
+    set_contact:"Coordonnées du salon", contact_phone:"Téléphone", contact_address:"Adresse (pour la carte)",
+    address_hint:"Ex. : Avenue Habib Bourguiba, Sousse", save_contact:"Enregistrer", t_contact_saved:"Coordonnées enregistrées ✓",
+    /* caisse : montants + historiques */
+    edit_amount:"Modifier le montant", ask_amount:"Montant reçu", base_price:"Prix", t_amount_saved:"Montant mis à jour ✓",
+    closures_history:"Historique des clôtures", clients_history:"Clients servis", no_clients_history:"Aucun client terminé.",
+    edit_total:"Modifier le total", ask_total:"Nouveau total", delete:"Supprimer",
+    confirm_del_entry:"Supprimer cette prestation de l'historique ?", t_entry_deleted:"Prestation supprimée.",
+    confirm_del_caisse:"Supprimer cette clôture ?", t_caisse_updated:"Caisse mise à jour ✓", t_caisse_deleted:"Clôture supprimée.",
+    clear_today:"Supprimer l'historique d'aujourd'hui", confirm_clear_today:"Supprimer toutes les prestations terminées d'aujourd'hui ? Action irréversible.", t_today_cleared:"Historique du jour supprimé.",
   },
   ar:{
     splash_sub:"اختر لغتك / Choisissez votre langue", brand_tag:"حلاقة رجالي",
@@ -776,6 +839,19 @@ const I18N = {
     reply_label:"الرد", reply_ph:"ردك…", salon_reply:"رد الصالون",
     hide_review:"إخفاء", show_review:"إظهار",
     t_replied:"تم حفظ الرد.", t_hidden:"تم إخفاء التقييم.", t_shown:"تم إظهار التقييم.",
+    /* حول + معلومات الاتصال */
+    nav_about:"حول", about_eyebrow:"الصالون", about_title:"حول",
+    about_phone:"الهاتف", about_address:"العنوان", call:"اتصال", directions:"الاتجاهات",
+    about_no_address_admin:"أضف عنوان الصالون في الإعدادات لعرض الخريطة.", go_settings:"الذهاب للإعدادات",
+    set_contact:"معلومات الصالون", contact_phone:"الهاتف", contact_address:"العنوان (للخريطة)",
+    address_hint:"مثال: شارع الحبيب بورقيبة، سوسة", save_contact:"حفظ", t_contact_saved:"تم حفظ المعلومات ✓",
+    /* الصندوق: المبالغ + السجلّات */
+    edit_amount:"تعديل المبلغ", ask_amount:"المبلغ المستلَم", base_price:"السعر", t_amount_saved:"تم تحديث المبلغ ✓",
+    closures_history:"سجل الإغلاقات", clients_history:"الزبائن الذين تمت خدمتهم", no_clients_history:"لا يوجد زبائن منتهون.",
+    edit_total:"تعديل المجموع", ask_total:"المجموع الجديد", delete:"حذف",
+    confirm_del_entry:"حذف هذه الخدمة من السجل؟", t_entry_deleted:"تم حذف الخدمة.",
+    confirm_del_caisse:"حذف هذا الإغلاق؟", t_caisse_updated:"تم تحديث الصندوق ✓", t_caisse_deleted:"تم حذف الإغلاق.",
+    clear_today:"حذف سجل اليوم", confirm_clear_today:"حذف كل خدمات اليوم المنتهية؟ لا يمكن التراجع.", t_today_cleared:"تم حذف سجل اليوم.",
   },
 };
 
@@ -954,6 +1030,7 @@ const App = {
   fmtClock(ms){ ms=Math.max(0,ms); const tot=Math.round(ms/1000), m=Math.floor(tot/60), s=tot%60; return m+":"+(s<10?"0":"")+s; },
   today(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); },
   fmtDate(j){ try{ return new Date(j+"T00:00:00").toLocaleDateString(this.lang==="ar"?"ar-TN":"fr-FR",{weekday:"long",day:"numeric",month:"long"}); }catch{ return j; } },
+  fmtTime(ts){ try{ return new Date(ts).toLocaleTimeString(this.lang==="ar"?"ar-TN":"fr-FR",{hour:"2-digit",minute:"2-digit"}); }catch(e){ return ""; } },
 
   renderServices(){
     const w=document.getElementById("services-list"); if(!w) return;
@@ -1066,6 +1143,45 @@ const App = {
     const s=DB.get("settings", DEFAULT_SETTINGS);
     if(s && s.appUrl) return s.appUrl;
     try{ return location.href.split("#")[0]; }catch(e){ return ""; }
+  },
+
+  /* ---------- coordonnées du salon + montants ---------- */
+  salon(){ return Object.assign({}, DEFAULT_SETTINGS, DB.get("settings", {}) || {}); },
+  montant(b){ return (b && b.recu!=null) ? b.recu : (b? (b.prix||0) : 0); },   // montant réellement encaissé (prix + pourboire)
+  tip(b){ const t=this.montant(b)-(b.prix||0); return t>0? t : 0; },
+  phoneDigits(p){ const r=(p||"").replace(/\D/g,""); return r.startsWith("216")? r : ("216"+r); },
+  phoneLocal(p){ const r=(p||"").replace(/\D/g,""); return r.startsWith("216")? r.slice(3) : r; },
+  phoneFmt(p){ const l=this.phoneLocal(p); return l.length===8 ? l.replace(/(\d{2})(\d{3})(\d{3})/,"$1 $2 $3") : (p||""); },
+
+  /* ---------- page À propos (client + admin) ---------- */
+  renderAbout(target){
+    const w=document.getElementById("about-"+target); if(!w) return;
+    const s=this.salon(); const isAdmin = target==="admin";
+    const tel=s.phone||""; const intl=this.phoneDigits(tel);
+    const head=`<div class="section-head"><div><div class="eyebrow">${this.t("about_eyebrow")}</div><h2>${this.t("about_title")}</h2></div></div>`;
+    let card=`<div class="card about-card">
+      <div class="about-brand"><div class="mark"><img class="logo-mark-img" src="logo-mark.png" alt=""/></div>
+        <div><div class="nm">WASSIM <span>COIFF</span></div><div class="tg">${this.t("brand_tag")}</div></div></div>`;
+    if(tel){
+      card+=`<div class="about-row"><span class="ic">📞</span><div><div class="lbl">${this.t("about_phone")}</div>
+        <a class="val" href="tel:+${intl}">${this.phoneFmt(tel)}</a></div></div>
+        <div class="about-actions">
+          <a class="btn btn-primary btn-sm" href="tel:+${intl}">📞 ${this.t("call")}</a>
+          <a class="btn btn-ghost btn-sm" href="https://wa.me/${intl}" target="_blank" rel="noopener">💬 WhatsApp</a></div>`;
+    }
+    if(s.address) card+=`<div class="about-row"><span class="ic">📍</span><div><div class="lbl">${this.t("about_address")}</div><div class="val">${this.escape(s.address)}</div></div></div>`;
+    card+=`</div>`;
+    let map="";
+    if(s.address){
+      const q=encodeURIComponent(s.address);
+      map=`<div class="card" style="padding:0;overflow:hidden;margin-top:14px">
+          <iframe class="about-map" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=${q}&z=16&output=embed"></iframe></div>
+        <a class="btn btn-brass btn-block mt" href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" rel="noopener">🧭 ${this.t("directions")}</a>`;
+    } else if(isAdmin){
+      map=`<div class="card" style="margin-top:14px"><p class="hint">${this.t("about_no_address_admin")}</p>
+        <button class="btn btn-brass btn-block mt-s" onclick="App.showTab('tab-settings','admin-nav')">${this.t("go_settings")}</button></div>`;
+    }
+    w.innerHTML=head+this.statusBannerHTML()+card+map;
   },
   qrDataURL(text, cell, margin){
     if(typeof qrcode==="undefined" || !text) return null;
@@ -1236,27 +1352,94 @@ const App = {
   renderCash(){
     const w=document.getElementById("cash-content"); if(!w) return;
     const bs=DB.get("bookings",[]);
-    const open=bs.filter(b=>b.jour===this.today() && b.statut==="termine" && !b.encaisse);
-    const total=open.reduce((s,b)=>s+b.prix,0), nb=open.length, avg=nb?Math.round(total/nb):0;
-    const caisses=DB.get("caisses",[]); const byDay={};
-    caisses.forEach(c=>{ if(!byDay[c.jour]) byDay[c.jour]={total:0,nb:0}; byDay[c.jour].total+=c.total; byDay[c.jour].nb+=c.nb; });
-    const days=Object.keys(byDay).sort().reverse();
+    const usersById={}; DB.get("users",[]).forEach(u=>usersById[u.id]=u);
+    const today=this.today();
+    const open=bs.filter(b=>b.jour===today && b.statut==="termine" && !b.encaisse);
+    const total=open.reduce((s,b)=>s+this.montant(b),0), nb=open.length, avg=nb?Math.round(total/nb):0;
+
+    const openList = open.map(b=>{
+      const tip=this.tip(b);
+      return `<div class="cash-line">
+        <div><div class="who">${b.icon} ${this.escape(b.clientNom||this.bName(b))}</div>
+          <div class="sub">${this.bName(b)}${b.finishedAt?" · "+this.fmtTime(b.finishedAt):""}</div></div>
+        <div class="amt-edit"><span class="price-pill">${this.montant(b)} ${this.t("dt")}${tip?`<span class="tag-tip">+${tip} ${this.t("dt")}</span>`:""}</span>
+          <button class="mini-btn" title="${this.t("edit_amount")}" onclick="App.editAmount('${b.id}')">✏️</button></div></div>`;
+    }).join("");
+
+    const caisses=DB.get("caisses",[]).slice().sort((a,b)=>(b.ts||0)-(a.ts||0));
+    const closHist = caisses.length ? caisses.map(c=>`<div class="hist-row">
+        <div><div class="d">${this.fmtDate(c.jour)}</div><div class="hint">${c.nb} ${this.t("services_done")}${c.ts?" · "+this.fmtTime(c.ts):""}</div></div>
+        <div class="amt-edit"><div class="t">${c.total} ${this.t("dt")}</div>
+          <button class="mini-btn" title="${this.t("edit_total")}" onclick="App.editCaisse('${c.id}')">✏️</button>
+          <button class="mini-btn danger" title="${this.t("delete")}" onclick="App.deleteCaisse('${c.id}')">🗑</button></div></div>`).join("")
+      : `<div class="card empty"><div class="ic">📒</div><div>${this.t("no_history")}</div></div>`;
+
+    const done = bs.filter(b=>b.statut==="termine").sort((a,b)=>(b.finishedAt||b.createdAt||0)-(a.finishedAt||a.createdAt||0)).slice(0,120);
+    const clientsHist = done.length ? done.map(b=>{
+      const u=usersById[b.userId]; const tel=(u&&u.tel)?this.phoneFmt(u.tel):"—"; const tip=this.tip(b);
+      return `<div class="cash-line">
+        <div><div class="who">${this.escape(b.clientNom||(u?u.nom:"—"))}</div>
+          <div class="sub">${b.icon} ${this.bName(b)} · 📞 ${tel} · ${this.fmtDate(b.jour)}</div></div>
+        <div class="amt-edit"><span class="price-pill">${this.montant(b)} ${this.t("dt")}${tip?`<span class="tag-tip">+${tip}</span>`:""}</span>
+          <button class="mini-btn" title="${this.t("edit_amount")}" onclick="App.editAmount('${b.id}')">✏️</button>
+          <button class="mini-btn danger" title="${this.t("delete")}" onclick="App.deleteBooking('${b.id}')">🗑</button></div></div>`;
+    }).join("") : `<div class="card empty"><div class="ic">🗂️</div><div>${this.t("no_clients_history")}</div></div>`;
+
     w.innerHTML=`<div class="card cash-hero">
         <div class="tk-label" style="color:var(--brass-soft)">${this.t("today_total")}</div>
         <div class="amt">${total}<small> ${this.t("dt")}</small></div>
         <div class="stat-row"><div class="stat"><div class="n">${nb}</div><div class="l">${this.t("services_done")}</div></div>
           <div class="stat"><div class="n">${avg} ${this.t("dt")}</div><div class="l">${this.t("avg_ticket")}</div></div></div>
-        <button class="btn btn-brass btn-block" onclick="App.closeRegister()" ${nb===0?"disabled":""}>🔒 ${this.t("close_register")}</button>
-        ${nb===0?`<p class="hint mt-s">${this.t("nothing_to_cash")}</p>`:""}</div>
-      <div class="section-head mt"><h2 style="font-size:1.05rem">${this.t("history")}</h2></div>
-      ${days.length===0?`<div class="card empty"><div class="ic">📒</div><div>${this.t("no_history")}</div></div>`
-        :days.map(j=>`<div class="hist-row"><div><div class="d">${this.fmtDate(j)}</div><div class="hint">${byDay[j].nb} ${this.t("services_done")}</div></div>
-          <div class="t">${byDay[j].total} ${this.t("dt")}</div></div>`).join("")}`;
+        ${open.length?`<div style="margin-top:8px">${openList}</div>`:`<p class="hint mt-s">${this.t("nothing_to_cash")}</p>`}
+        <button class="btn btn-brass btn-block mt" onclick="App.closeRegister()" ${nb===0?"disabled":""}>🔒 ${this.t("close_register")}</button></div>
+
+      <div class="section-head mt"><h2 style="font-size:1.05rem">${this.t("closures_history")}</h2></div>
+      ${closHist}
+
+      <div class="section-head mt"><h2 style="font-size:1.05rem">${this.t("clients_history")}</h2></div>
+      ${clientsHist}
+      ${done.length?`<div class="danger-zone"><button class="btn-danger-soft" onclick="App.clearTodayHistory()">🗑 ${this.t("clear_today")}</button></div>`:""}`;
+  },
+
+  /* modifier le montant encaissé (prix + pourboire) */
+  editAmount(id){
+    const bs=DB.get("bookings",[]); const b=bs.find(x=>x.id===id); if(!b) return;
+    const cur=this.montant(b);
+    const v=window.prompt(this.t("ask_amount")+" ("+this.t("dt")+")  ·  "+this.t("base_price")+": "+(b.prix||0), String(cur));
+    if(v===null) return;
+    const n=Math.max(0, Math.round(parseFloat(String(v).replace(",","."))||0));
+    b.recu=n; DB.set("bookings",bs); this.toast(this.t("t_amount_saved")); this.renderAll();
+  },
+  /* historique : supprimer une prestation terminée */
+  deleteBooking(id){
+    if(!window.confirm(this.t("confirm_del_entry"))) return;
+    DB.del("bookings", id); this.toast(this.t("t_entry_deleted")); this.renderAll();
+  },
+  /* caisse : modifier le total d'une clôture */
+  editCaisse(id){
+    const cs=DB.get("caisses",[]); const c=cs.find(x=>x.id===id); if(!c) return;
+    const v=window.prompt(this.t("ask_total")+" ("+this.t("dt")+")", String(c.total||0));
+    if(v===null) return;
+    c.total=Math.max(0, Math.round(parseFloat(String(v).replace(",","."))||0));
+    DB.set("caisses",cs); this.toast(this.t("t_caisse_updated")); this.renderCash();
+  },
+  /* caisse : supprimer une clôture */
+  deleteCaisse(id){
+    if(!window.confirm(this.t("confirm_del_caisse"))) return;
+    DB.del("caisses", id); this.toast(this.t("t_caisse_deleted")); this.renderCash();
+  },
+  /* supprimer tout l'historique terminé d'aujourd'hui (prestations + clôtures du jour) */
+  clearTodayHistory(){
+    if(!window.confirm(this.t("confirm_clear_today"))) return;
+    const today=this.today();
+    DB.get("bookings",[]).filter(b=>b.jour===today && b.statut==="termine").forEach(b=>DB.del("bookings", b.id));
+    DB.get("caisses",[]).filter(c=>c.jour===today).forEach(c=>DB.del("caisses", c.id));
+    this.toast(this.t("t_today_cleared")); this.renderAll();
   },
   closeRegister(){
     if(!window.confirm(this.t("confirm_close"))) return;
     const bs=DB.get("bookings",[]); const open=bs.filter(b=>b.jour===this.today() && b.statut==="termine" && !b.encaisse);
-    if(open.length===0) return; const total=open.reduce((s,b)=>s+b.prix,0); open.forEach(b=>b.encaisse=true); DB.set("bookings",bs);
+    if(open.length===0) return; const total=open.reduce((s,b)=>s+this.montant(b),0); open.forEach(b=>b.encaisse=true); DB.set("bookings",bs);
     const caisses=DB.get("caisses",[]); caisses.push({id:"c"+Date.now(), jour:this.today(), total, nb:open.length, ts:Date.now()}); DB.set("caisses",caisses);
     this.toast(this.t("t_closed")); this.renderCash();
   },
@@ -1426,7 +1609,7 @@ const App = {
     const weekAgo=startToday-6*86400000;
     const startMonth=new Date(now.getFullYear(),now.getMonth(),1).getTime();
     const ts=b=>b.finishedAt||b.createdAt||0;
-    const sum=arr=>arr.reduce((s,b)=>s+(b.prix||0),0);
+    const sum=arr=>arr.reduce((s,b)=>s+this.montant(b),0);
     const weekB=all.filter(b=>ts(b)>=weekAgo), monthB=all.filter(b=>ts(b)>=startMonth);
     const clients=new Set(all.map(b=>b.userId)).size;
     const cards=`<div class="stat-cards">
@@ -1499,7 +1682,19 @@ const App = {
       <div class="field"><label>${this.t("loyalty_every")}</label><input type="number" id="loyalty-every" min="2" max="50" value="${L.every}"></div>
       <button class="btn btn-brass btn-block" onclick="App.saveLoyalty()">${this.t("save_loyalty")}</button></div>`;
 
-    w.innerHTML=share+hours+feries+promo+loyalty;
+    const sInfo=this.salon();
+    const contact=`<div class="card set-card"><div class="hd">🏠 ${this.t("set_contact")}</div>
+      <div class="field"><label>${this.t("contact_phone")}</label><input id="set-phone" type="tel" inputmode="tel" placeholder="54 947 435" value="${this.escape(sInfo.phone||'')}"></div>
+      <div class="field"><label>${this.t("contact_address")}</label><input id="set-address" type="text" placeholder="${this.t("address_hint")}" value="${this.escape(sInfo.address||'')}"></div>
+      <button class="btn btn-brass btn-block" onclick="App.saveSalonInfo()">${this.t("save_contact")}</button></div>`;
+
+    w.innerHTML=share+contact+hours+feries+promo+loyalty;
+  },
+  saveSalonInfo(){
+    const s=this.salon();
+    s.phone=(document.getElementById("set-phone").value||"").trim();
+    s.address=(document.getElementById("set-address").value||"").trim();
+    DB.set("settings", s); this.toast(this.t("t_contact_saved")); this.renderAll();
   },
   saveHours(){
     const H=this.hours();
@@ -1535,6 +1730,7 @@ const App = {
     this.renderServices(); this.renderMyTurn(); this.renderQueue(); this.renderCash();
     this.renderSvcAdmin(); this.renderUsers(); this.renderReviews();
     this.renderStats(); this.renderSettings();
+    this.renderAbout("client"); this.renderAbout("admin");
   },
   tick(){
     if(!this.session) return;
