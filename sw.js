@@ -1,5 +1,5 @@
 /* Wassim Coiff — service worker (mode hors-ligne + mises à jour automatiques) */
-const CACHE = "wassim-coiff-v4";
+const CACHE = "wassim-coiff-v5";
 const SHELL = [
   "./",
   "./index.html",
@@ -15,6 +15,8 @@ self.addEventListener("install", (e) => {
     caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())
   );
 });
+
+self.addEventListener("message", (e) => { if (e.data === "skip") self.skipWaiting(); });
 
 self.addEventListener("activate", (e) => {
   e.waitUntil(
