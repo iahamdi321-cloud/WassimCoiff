@@ -1772,7 +1772,26 @@ document.addEventListener("DOMContentLoaded",()=>{
 
   /* Mode hors-ligne : enregistrement du service worker */
   if("serviceWorker" in navigator){
-    window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+    // recharge automatiquement la page quand une nouvelle version prend le contrôle
+    let _swReloaded=false;
+    if(navigator.serviceWorker.controller){
+      navigator.serviceWorker.addEventListener("controllerchange",()=>{
+        if(_swReloaded) return; _swReloaded=true; window.location.reload();
+      });
+    }
+    window.addEventListener("load",()=>{
+      navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then((reg)=>{
+        reg.update();
+        // si une nouvelle version est déjà en attente, on l'active tout de suite
+        if(reg.waiting) reg.waiting.postMessage("skip");
+        reg.addEventListener("updatefound",()=>{
+          const sw=reg.installing;
+          if(sw) sw.addEventListener("statechange",()=>{ if(sw.state==="installed" && reg.waiting) reg.waiting.postMessage("skip"); });
+        });
+        // vérifie les mises à jour à chaque retour sur l'app
+        document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") reg.update(); });
+      }).catch(()=>{});
+    });
   }
 });
 </script>
