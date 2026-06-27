@@ -907,6 +907,7 @@ const App = {
     this._initialDone=true;
     clearTimeout(this._bootTimeout);
     this.ensureSeed();
+    this.recomputeCaisses();
     this.session = DB.get("session", null);
     this.showBoot(false);
     if(!this.lang){ this.show("screen-lang"); }
@@ -1370,7 +1371,6 @@ const App = {
     const closHist = caisses.length ? caisses.map(c=>`<div class="hist-row">
         <div><div class="d">${this.fmtDate(c.jour)}</div><div class="hint">${c.nb} ${this.t("services_done")}${c.ts?" · "+this.fmtTime(c.ts):""}</div></div>
         <div class="amt-edit"><div class="t">${c.total} ${this.t("dt")}</div>
-          <button class="mini-btn" title="${this.t("edit_total")}" onclick="App.editCaisse('${c.id}')">✏️</button>
           <button class="mini-btn danger" title="${this.t("delete")}" onclick="App.deleteCaisse('${c.id}')">🗑</button></div></div>`).join("")
       : `<div class="card empty"><div class="ic">📒</div><div>${this.t("no_history")}</div></div>`;
 
@@ -1401,27 +1401,43 @@ const App = {
       ${done.length?`<div class="danger-zone"><button class="btn-danger-soft" onclick="App.clearTodayHistory()">🗑 ${this.t("clear_today")}</button></div>`:""}`;
   },
 
-  /* modifier le montant encaissé (prix + pourboire) */
+  /* modifier le montant encaissé (prix + pourboire) — la clôture du jour se met à jour */
   editAmount(id){
     const bs=DB.get("bookings",[]); const b=bs.find(x=>x.id===id); if(!b) return;
     const cur=this.montant(b);
     const v=window.prompt(this.t("ask_amount")+" ("+this.t("dt")+")  ·  "+this.t("base_price")+": "+(b.prix||0), String(cur));
     if(v===null) return;
     const n=Math.max(0, Math.round(parseFloat(String(v).replace(",","."))||0));
-    b.recu=n; DB.set("bookings",bs); this.toast(this.t("t_amount_saved")); this.renderAll();
+    b.recu=n; DB.set("bookings",bs); this.recomputeCaisses(); this.toast(this.t("t_amount_saved")); this.renderAll();
   },
-  /* historique : supprimer une prestation terminée */
+  /* recalcule le total de chaque clôture à partir des montants réels des clients */
+  recomputeCaisses(){
+    const cs=DB.get("caisses",[]).slice().sort((a,b)=>(a.ts||0)-(b.ts||0));
+    const bks=DB.get("bookings",[]); const byId={}; bks.forEach(b=>byId[b.id]=b);
+    let changed=false; const covered=new Set();
+    // clôtures avec liste d'ids (nouvelles)
+    cs.forEach(c=>{ if(c.ids && c.ids.length){
+      const t=c.ids.reduce((s,id)=>{ covered.add(id); return s+(byId[id]?this.montant(byId[id]):0); },0);
+      if(c.nb!==c.ids.length){ c.nb=c.ids.length; changed=true; }
+      if(t!==c.total){ c.total=t; changed=true; }
+    }});
+    // clôtures anciennes (sans ids) : on répartit les prestations encaissées du jour
+    cs.forEach(c=>{ if(!(c.ids && c.ids.length)){
+      const day=bks.filter(b=>b.jour===c.jour && b.statut==="termine" && b.encaisse && !covered.has(b.id));
+      day.forEach(b=>covered.add(b.id));
+      const t=day.reduce((s,b)=>s+this.montant(b),0);
+      if(c.nb!==day.length){ c.nb=day.length; changed=true; }
+      if(t!==c.total){ c.total=t; changed=true; }
+    }});
+    if(changed) DB.set("caisses",cs);
+  },
+  /* historique : supprimer une prestation terminée (et l'enlever de sa clôture) */
   deleteBooking(id){
     if(!window.confirm(this.t("confirm_del_entry"))) return;
-    DB.del("bookings", id); this.toast(this.t("t_entry_deleted")); this.renderAll();
-  },
-  /* caisse : modifier le total d'une clôture */
-  editCaisse(id){
-    const cs=DB.get("caisses",[]); const c=cs.find(x=>x.id===id); if(!c) return;
-    const v=window.prompt(this.t("ask_total")+" ("+this.t("dt")+")", String(c.total||0));
-    if(v===null) return;
-    c.total=Math.max(0, Math.round(parseFloat(String(v).replace(",","."))||0));
-    DB.set("caisses",cs); this.toast(this.t("t_caisse_updated")); this.renderCash();
+    const cs=DB.get("caisses",[]); let touched=false;
+    cs.forEach(c=>{ if(c.ids && c.ids.includes(id)){ c.ids=c.ids.filter(x=>x!==id); touched=true; } });
+    if(touched) DB.set("caisses",cs);
+    DB.del("bookings", id); this.recomputeCaisses(); this.toast(this.t("t_entry_deleted")); this.renderAll();
   },
   /* caisse : supprimer une clôture */
   deleteCaisse(id){
@@ -1440,7 +1456,7 @@ const App = {
     if(!window.confirm(this.t("confirm_close"))) return;
     const bs=DB.get("bookings",[]); const open=bs.filter(b=>b.jour===this.today() && b.statut==="termine" && !b.encaisse);
     if(open.length===0) return; const total=open.reduce((s,b)=>s+this.montant(b),0); open.forEach(b=>b.encaisse=true); DB.set("bookings",bs);
-    const caisses=DB.get("caisses",[]); caisses.push({id:"c"+Date.now(), jour:this.today(), total, nb:open.length, ts:Date.now()}); DB.set("caisses",caisses);
+    const caisses=DB.get("caisses",[]); caisses.push({id:"c"+Date.now(), jour:this.today(), total, nb:open.length, ids:open.map(b=>b.id), ts:Date.now()}); DB.set("caisses",caisses);
     this.toast(this.t("t_closed")); this.renderCash();
   },
 
