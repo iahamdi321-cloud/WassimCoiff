@@ -17,6 +17,10 @@
 <!-- Générateur de QR code (mis en cache hors-ligne par le service worker) -->
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js" crossorigin="anonymous"></script>
 
+<!-- Firebase (base de données temps réel Firestore) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" crossorigin="anonymous"></script>
+
 <!-- =====================================================================
   LE GRÉNAT — Application salon de coiffure homme (FR / العربية)
   Tout dans un seul fichier (HTML + CSS + JS).
@@ -299,6 +303,16 @@ textarea{resize:vertical;min-height:80px}
   #print-area{position:absolute;inset:0;display:block!important;padding:24px;background:#fff}
 }
 #print-area{display:none}
+
+/* ---------- écran de connexion (boot) ---------- */
+#boot{position:fixed;inset:0;z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  background:radial-gradient(circle at 50% 35%,var(--garnet-deep),var(--bg));text-align:center}
+#boot.show{display:flex}
+#boot .boot-badge{width:92px;height:92px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 30% 25%,var(--garnet-soft),var(--garnet-deep));border:2px solid var(--brass);box-shadow:0 16px 40px rgba(123,30,58,.55)}
+#boot .boot-spin{width:30px;height:30px;border-radius:50%;border:3px solid rgba(201,162,75,.25);border-top-color:var(--brass);animation:bootspin .8s linear infinite}
+#boot .boot-txt{font-family:var(--display);letter-spacing:.18em;text-transform:uppercase;font-size:.8rem;color:var(--muted)}
+@keyframes bootspin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -462,6 +476,11 @@ textarea{resize:vertical;min-height:80px}
 
   <div class="toast" id="toast"></div>
   <div id="print-area"></div>
+  <div id="boot">
+    <div class="boot-badge"><img class="logo-mark-img" src="logo-mark.png" alt="Wassim Coiff" /></div>
+    <div class="boot-spin"></div>
+    <div class="boot-txt">Connexion…</div>
+  </div>
 </div>
 
 <script>
@@ -473,9 +492,74 @@ textarea{resize:vertical;min-height:80px}
    (users, bookings, services, avis, caisses) et réécrivez get()/set()
    pour lire/écrire dans Firestore (idéalement en versions async).
    ===================================================================== */
+/* =====================================================================
+   FIREBASE — configuration de TON projet "wassim-coiff"
+   ===================================================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyBnZE79sUdRB8LNxjTT1nEv4my6z8f_fiI",
+  authDomain: "wassim-coiff.firebaseapp.com",
+  projectId: "wassim-coiff",
+  storageBucket: "wassim-coiff.firebasestorage.app",
+  messagingSenderId: "955136785150",
+  appId: "1:955136785150:web:3a158aa29fa173ff4cc3af"
+};
+
+/* =====================================================================
+   COUCHE DE DONNÉES
+   - Les "collections" Firestore : users, services, bookings, avis, caisses
+   - Les réglages (hours, promo, loyalty, settings) : collection "config"
+   - lang + session restent LOCAUX à chaque appareil (pas synchronisés)
+   DB.get() lit un cache mémoire (synchrone) ; DB.set() écrit dans Firestore.
+   Les écouteurs temps réel (onSnapshot) mettent le cache à jour automatiquement.
+   ===================================================================== */
+const COLLECTIONS = ["users","services","bookings","avis","caisses"];
+const CONFIG_KEYS = ["hours","promo","loyalty","settings"];
+const NO_DELETE   = ["bookings","caisses"];   // jamais supprimés (uniquement ajout/màj)
+const LOCAL_KEYS  = ["lang","session"];        // propres à l'appareil
+
 const DB = {
-  get(key, def){ try{ const v = JSON.parse(localStorage.getItem("lg_"+key)); return v===null||v===undefined?def:v; }catch{ return def; } },
-  set(key, val){ localStorage.setItem("lg_"+key, JSON.stringify(val)); },
+  db:null, _cache:{},
+  clone(v){ return v==null ? v : JSON.parse(JSON.stringify(v)); },
+  isLocal(key){ return LOCAL_KEYS.includes(key); },
+
+  get(key, def){
+    if(this.isLocal(key)){
+      try{ const r=localStorage.getItem("lg_"+key); return (r==null)?def:JSON.parse(r); }catch(e){ return def; }
+    }
+    const v=this._cache[key];
+    return (v===undefined||v===null) ? def : this.clone(v);
+  },
+
+  set(key, val){
+    if(this.isLocal(key)){
+      try{ localStorage.setItem("lg_"+key, JSON.stringify(val)); }catch(e){}
+      return;
+    }
+    const old=this._cache[key];
+    this._cache[key]=this.clone(val);
+    if(!this.db) return;
+
+    // réglages -> un document dans la collection "config"
+    if(CONFIG_KEYS.includes(key)){
+      this.db.collection("config").doc(key).set({value:this.clone(val)}).catch(()=>{});
+      return;
+    }
+    // collections -> un document par élément (clé = id) ; on n'écrit que ce qui change
+    const newArr=Array.isArray(val)?val:[], oldArr=Array.isArray(old)?old:[];
+    const oldById={}; oldArr.forEach(it=>{ if(it&&it.id!=null) oldById[String(it.id)]=it; });
+    const seen=new Set();
+    newArr.forEach(it=>{
+      if(!it||it.id==null) return;
+      const id=String(it.id); seen.add(id);
+      const prev=oldById[id];
+      if(!prev || JSON.stringify(prev)!==JSON.stringify(it)){
+        this.db.collection(key).doc(id).set(this.clone(it)).catch(()=>{});
+      }
+    });
+    if(!NO_DELETE.includes(key)){
+      oldArr.forEach(it=>{ if(it&&it.id!=null && !seen.has(String(it.id))) this.db.collection(key).doc(String(it.id)).delete().catch(()=>{}); });
+    }
+  },
 };
 
 /* Prestations par défaut (créées au premier lancement, puis modifiables par l'admin) */
@@ -703,18 +787,66 @@ const App = {
   svcFormOpen:false, svcEditId:null, deferredPrompt:null, _promoDaysSel:null,
 
   init(){
-    this.ensureSeed();
-    this.lang = DB.get("lang", null);
-    this.session = DB.get("session", null);
+    this.lang = DB.get("lang", null);          // local à l'appareil
     this.buildLangToggles();
-    if(!this.lang){ this.show("screen-lang"); }
-    else { this.applyLang(); this.route(); }
+    this.showBoot(true);
+
+    // Connexion à Firebase
+    try{
+      if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+      DB.db = firebase.firestore();
+      DB.db.enablePersistence({synchronizeTabs:true}).catch(()=>{});  // cache hors-ligne (best-effort)
+    }catch(e){ console.warn("Firebase init:", e); }
+
+    this.connect();
+    // filet de sécurité : si Firestore ne répond pas (ex. hors-ligne au 1er lancement)
+    this._bootTimeout = setTimeout(()=>{ if(!this._initialDone) this._afterInitial(); }, 6000);
+
     this.ticker = setInterval(()=>this.tick(), 1000);
   },
 
+  /* écoute en temps réel toutes les collections + les réglages */
+  connect(){
+    if(!DB.db){ this._afterInitial(); return; }
+    this._pending = new Set([...COLLECTIONS, "config"]);
+    COLLECTIONS.forEach(name=>{
+      DB.db.collection(name).onSnapshot(
+        snap=>{ const arr=[]; snap.forEach(d=>arr.push(d.data())); DB._cache[name]=arr; this._markReady(name); },
+        err=>{ console.warn("snapshot "+name, err); this._markReady(name); }
+      );
+    });
+    DB.db.collection("config").onSnapshot(
+      snap=>{ snap.forEach(d=>{ const v=d.data(); DB._cache[d.id]=v?v.value:undefined; }); this._markReady("config"); },
+      err=>{ console.warn("snapshot config", err); this._markReady("config"); }
+    );
+  },
+  _markReady(name){
+    if(this._pending){ this._pending.delete(name);
+      if(this._pending.size===0 && !this._initialDone) this._afterInitial();
+    }
+    this.onData();
+  },
+  _afterInitial(){
+    if(this._initialDone) return;
+    this._initialDone=true;
+    clearTimeout(this._bootTimeout);
+    this.ensureSeed();
+    this.session = DB.get("session", null);
+    this.showBoot(false);
+    if(!this.lang){ this.show("screen-lang"); }
+    else { this.applyLang(); this.route(); }
+  },
+  /* re-rendu réactif quand des données changent sur un autre appareil */
+  onData(){
+    if(!this._initialDone) return;
+    clearTimeout(this._rerender);
+    this._rerender=setTimeout(()=>{ if(this.session) this.renderAll(); }, 90);
+  },
+  showBoot(on){ const b=document.getElementById("boot"); if(b) b.classList.toggle("show", !!on); },
+
   /* données de départ */
   ensureSeed(){
-    if(DB.get("services", null)===null) DB.set("services", DEFAULT_SERVICES);
+    if(!DB.get("services",[]).length) DB.set("services", DEFAULT_SERVICES);
     if(DB.get("hours", null)===null) DB.set("hours", DEFAULT_HOURS);
     if(DB.get("promo", null)===null) DB.set("promo", DEFAULT_PROMO);
     if(DB.get("loyalty", null)===null) DB.set("loyalty", DEFAULT_LOYALTY);
@@ -1125,7 +1257,7 @@ const App = {
     if(!window.confirm(this.t("confirm_close"))) return;
     const bs=DB.get("bookings",[]); const open=bs.filter(b=>b.jour===this.today() && b.statut==="termine" && !b.encaisse);
     if(open.length===0) return; const total=open.reduce((s,b)=>s+b.prix,0); open.forEach(b=>b.encaisse=true); DB.set("bookings",bs);
-    const caisses=DB.get("caisses",[]); caisses.push({jour:this.today(),total,nb:open.length,ts:Date.now()}); DB.set("caisses",caisses);
+    const caisses=DB.get("caisses",[]); caisses.push({id:"c"+Date.now(), jour:this.today(), total, nb:open.length, ts:Date.now()}); DB.set("caisses",caisses);
     this.toast(this.t("t_closed")); this.renderCash();
   },
 
@@ -1330,10 +1462,7 @@ const App = {
 
     const share=`<div class="card set-card"><div class="hd">📲 ${this.t("set_share")}</div>
       <div class="qr-box">${this.qrImg(url,6)}<div class="cap">${this.t("set_share_hint")}</div></div>
-      <div class="url-row"><div class="u">${this.escape(url)}</div><button class="btn btn-ghost btn-sm" onclick="App.copyAppUrl()">${this.t("copy")}</button></div>
-      <div class="field" style="margin-top:10px"><label>${this.t("set_url_label")}</label>
-        <input id="set-appurl" type="url" placeholder="https://…" value="${this.escape(DB.get('settings',DEFAULT_SETTINGS).appUrl||'')}"></div>
-      <button class="btn btn-brass btn-block" onclick="App.saveAppUrl()">${this.t("save")}</button></div>`;
+      <div class="url-row"><div class="u">${this.escape(url)}</div><button class="btn btn-ghost btn-sm" onclick="App.copyAppUrl()">${this.t("copy")}</button></div></div>`;
 
     const rows=order.map(i=>{
       const d=H.days[i]||H.days[String(i)]||{open:false,from:"09:00",to:"19:00",bfrom:"",bto:""};
@@ -1372,8 +1501,6 @@ const App = {
 
     w.innerHTML=share+hours+feries+promo+loyalty;
   },
-  saveAppUrl(){ const v=document.getElementById("set-appurl").value.trim();
-    const s=DB.get("settings",DEFAULT_SETTINGS); s.appUrl=v; DB.set("settings",s); this.toast(this.t("t_saved")); this.renderSettings(); },
   saveHours(){
     const H=this.hours();
     document.querySelectorAll("#settings-content .day-row").forEach(row=>{
