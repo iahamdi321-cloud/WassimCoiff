@@ -1,5 +1,5 @@
 /* Wassim Coiff — service worker (mode hors-ligne) */
-const CACHE = "wassim-coiff-v2";
+const CACHE = "wassim-coiff-v3";
 const SHELL = [
   "./",
   "./index.html",
@@ -36,6 +36,7 @@ self.addEventListener("fetch", (e) => {
           const cacheable = res && res.status === 200 &&
             (url.origin === location.origin ||
              url.host.indexOf("fonts.g") !== -1 ||
+             url.host.indexOf("gstatic") !== -1 ||
              url.host.indexOf("jsdelivr") !== -1);
           if (cacheable) {
             const copy = res.clone();
