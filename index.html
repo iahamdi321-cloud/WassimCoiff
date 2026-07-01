@@ -345,6 +345,83 @@ a.val:hover{color:var(--brass-soft)}
 #boot .boot-spin{width:30px;height:30px;border-radius:50%;border:3px solid rgba(201,162,75,.25);border-top-color:var(--brass);animation:bootspin .8s linear infinite}
 #boot .boot-txt{font-family:var(--display);letter-spacing:.18em;text-transform:uppercase;font-size:.8rem;color:var(--muted)}
 @keyframes bootspin{to{transform:rotate(360deg)}}
+
+/* ===== Cloche de notifications (admin) ===== */
+.bell-btn{position:relative}
+.bell-badge{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--danger);color:#fff;font-family:var(--body);font-size:.62rem;font-weight:700;display:grid;place-items:center;border:2px solid var(--bg);line-height:1}
+.notif-panel{position:fixed;left:0;right:0;top:0;z-index:60;display:none;justify-content:center;padding:10px}
+.notif-panel.show{display:flex}
+.notif-card{width:100%;max-width:var(--maxw);background:linear-gradient(180deg,var(--bg-2),#1b1310);border:1px solid var(--brass);border-radius:var(--radius);box-shadow:var(--shadow);max-height:80vh;display:flex;flex-direction:column;overflow:hidden}
+.notif-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+.notif-head .ttl{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:1rem}
+.notif-list{overflow-y:auto;padding:8px}
+.notif-item{display:flex;gap:11px;align-items:flex-start;padding:11px 12px;border-radius:11px;background:var(--bg-2);border:1px solid var(--line);margin-bottom:8px}
+.notif-item.unread{border-color:rgba(201,162,75,.5);background:rgba(201,162,75,.07)}
+.notif-item .ni-ic{width:34px;height:34px;border-radius:10px;flex:none;display:grid;place-items:center;font-size:16px;background:rgba(123,30,58,.25);border:1px solid rgba(201,162,75,.25)}
+.notif-item .ni-txt{flex:1;min-width:0}
+.notif-item .ni-main{font-size:.9rem;color:var(--cream)}
+.notif-item .ni-sub{font-size:.74rem;color:var(--muted);margin-top:2px}
+.notif-backdrop{position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.5);display:none}
+.notif-backdrop.show{display:block}
+
+/* ===== Bouton unique Ouvrir / Fermer le salon (admin) ===== */
+.salon-switch{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:16px;border-radius:var(--radius);margin-bottom:16px;border:1px solid var(--line)}
+.salon-switch.is-open{background:linear-gradient(135deg,rgba(95,164,106,.16),rgba(95,164,106,.05));border-color:rgba(95,164,106,.45)}
+.salon-switch.is-closed{background:linear-gradient(135deg,rgba(194,75,75,.16),rgba(194,75,75,.05));border-color:rgba(194,75,75,.45)}
+.salon-switch .ss-info{display:flex;align-items:center;gap:12px}
+.salon-switch .ss-dot{width:13px;height:13px;border-radius:50%;flex:none}
+.salon-switch.is-open .ss-dot{background:var(--ok);box-shadow:0 0 0 4px rgba(95,164,106,.22)}
+.salon-switch.is-closed .ss-dot{background:var(--danger);box-shadow:0 0 0 4px rgba(194,75,75,.22)}
+.salon-switch .ss-title{font-family:var(--display);text-transform:uppercase;letter-spacing:.06em;font-weight:600;font-size:1.05rem}
+.salon-switch .ss-sub{font-size:.76rem;color:var(--muted)}
+.ss-btn{font-family:var(--display);letter-spacing:.06em;text-transform:uppercase;font-weight:700;font-size:.82rem;border:0;border-radius:11px;padding:12px 20px;cursor:pointer;transition:.16s;color:#fff}
+.ss-btn:active{transform:scale(.97)}
+.ss-btn.close{background:linear-gradient(180deg,#d15b5b,var(--danger));box-shadow:0 6px 16px rgba(194,75,75,.4)}
+.ss-btn.open{background:linear-gradient(180deg,#6fb87a,var(--ok));box-shadow:0 6px 16px rgba(95,164,106,.4)}
+
+/* ===== Calendrier / Agenda (RDV) ===== */
+.cal{background:linear-gradient(180deg,var(--bg-2),#1b1310);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-head .m{font-family:var(--display);text-transform:capitalize;letter-spacing:.04em;font-size:1.05rem}
+.cal-nav{border:1px solid var(--line);background:var(--bg-2);color:var(--cream-dim);width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:16px;display:grid;place-items:center;transition:.15s}
+.cal-nav:hover{border-color:var(--brass);color:var(--brass-soft)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.cal-dow{text-align:center;font-size:.64rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:4px 0}
+.cal-cell{aspect-ratio:1;border-radius:10px;border:1px solid transparent;background:rgba(244,237,226,.03);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;position:relative;transition:.15s;color:var(--cream-dim);font-size:.9rem}
+.cal-cell.blank{background:transparent;cursor:default}
+.cal-cell:not(.blank):hover{border-color:rgba(201,162,75,.4)}
+.cal-cell.today{border-color:var(--brass);color:var(--brass-soft)}
+.cal-cell.sel{background:var(--garnet);color:var(--cream);border-color:var(--garnet-soft)}
+.cal-cell.past{opacity:.4}
+.cal-dot{width:5px;height:5px;border-radius:50%;background:var(--brass-soft)}
+.cal-cell.sel .cal-dot{background:var(--cream)}
+.cal-cnt{position:absolute;top:3px;right:4px;font-size:.56rem;color:var(--brass-soft);font-weight:700}
+.cal-cell.sel .cal-cnt{color:var(--cream)}
+.rdv-row{display:flex;align-items:center;gap:11px;padding:12px 14px;border-radius:var(--radius);background:linear-gradient(180deg,var(--bg-2),#1b1310);border:1px solid var(--line);margin-bottom:10px}
+.rdv-row .rdv-time{font-family:var(--display);font-size:1.15rem;color:var(--brass-soft);min-width:52px;text-align:center;line-height:1}
+.rdv-row .rdv-body{flex:1;min-width:0}
+.rdv-row .rdv-who{font-family:var(--display);font-size:1.02rem;letter-spacing:.02em}
+.rdv-row .rdv-sub{font-size:.76rem;color:var(--muted)}
+.rdv-row .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.slot-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(66px,1fr));gap:8px;margin-top:6px}
+.slot{border:1px solid var(--line);background:var(--bg-2);color:var(--cream-dim);border-radius:10px;padding:9px 6px;font-family:var(--display);font-size:.9rem;cursor:pointer;transition:.15s;text-align:center}
+.slot:hover{border-color:rgba(201,162,75,.5)}
+.slot.on{background:var(--garnet);color:var(--cream);border-color:var(--garnet-soft)}
+.slot.taken{opacity:.35;cursor:not-allowed;text-decoration:line-through}
+.svc-pick{display:grid;gap:8px}
+.svc-opt{display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:11px;border:1px solid var(--line);background:var(--bg-2);cursor:pointer;transition:.15s}
+.svc-opt:hover{border-color:rgba(201,162,75,.4)}
+.svc-opt.on{border-color:var(--brass);background:rgba(201,162,75,.08)}
+.svc-opt .so-ic{font-size:18px}
+.svc-opt .so-nm{flex:1;font-family:var(--display);letter-spacing:.02em}
+.svc-opt .so-pr{color:var(--brass-soft);font-family:var(--display)}
+.badge-rdv{display:inline-block;font-size:.6rem;padding:1px 6px;border-radius:6px;background:rgba(201,162,75,.18);color:var(--brass-soft);letter-spacing:.04em;vertical-align:middle}
+.manual-cash{border:1px solid rgba(201,162,75,.28);background:rgba(201,162,75,.05)}
+.manual-cash .mc-head{font-family:var(--display);font-size:1rem;color:var(--brass-soft);letter-spacing:.03em;margin-bottom:12px}
+.manual-cash .fld{display:block;margin-bottom:12px}
+.manual-cash .fld span{display:block;font-size:.76rem;color:var(--cream-dim);margin-bottom:6px;letter-spacing:.04em}
+.manual-cash .mc-actions{display:flex;gap:10px;margin-top:4px}
+.manual-cash .mc-actions .btn{flex:1}
 </style>
 </head>
 <body>
@@ -412,6 +489,7 @@ a.val:hover{color:var(--brass-soft)}
       </header>
       <nav class="topnav" id="client-nav">
         <button class="on" data-tab="tab-myturn"><span class="ic">🎟️</span><span data-i18n="nav_myturn">Mon tour</span></button>
+        <button data-tab="tab-rdv-client"><span class="ic">📅</span><span data-i18n="nav_rdv">Rendez-vous</span></button>
         <button data-tab="tab-services"><span class="ic">✂️</span><span data-i18n="nav_services">Carte</span></button>
         <button data-tab="tab-reviews"><span class="ic">⭐</span><span data-i18n="nav_reviews">Avis</span></button>
         <button data-tab="tab-about-client"><span class="ic">📍</span><span data-i18n="nav_about">À propos</span></button>
@@ -425,6 +503,11 @@ a.val:hover{color:var(--brass-soft)}
     <div class="screen-tab pad active" id="tab-myturn">
       <div class="section-head"><div><div class="eyebrow" data-i18n="turn_eyebrow">File en direct</div><h2 data-i18n="myturn_title">Mon tour</h2></div></div>
       <div id="myturn-content"></div>
+    </div>
+
+    <div class="screen-tab pad" id="tab-rdv-client">
+      <div class="section-head"><div><div class="eyebrow" data-i18n="rdv_eyebrow">Sur rendez-vous</div><h2 data-i18n="rdv_title">Prendre rendez-vous</h2></div></div>
+      <div id="rdv-client-content"></div>
     </div>
 
     <div class="screen-tab pad" id="tab-services">
@@ -457,10 +540,12 @@ a.val:hover{color:var(--brass-soft)}
           <div><div class="name">WASSIM <span>COIFF</span></div><div class="tag" id="admin-hello">Le Grénat</div></div>
         </div>
         <div class="top-actions"><div class="lang-toggle" id="lang-toggle-admin"></div>
+          <button class="icon-btn bell-btn" id="admin-bell" onclick="App.toggleNotifs()" title="Notifications">🔔<span class="bell-badge" id="bell-badge" style="display:none">0</span></button>
           <button class="icon-btn" onclick="App.logout()" title="Quitter">⎋</button></div>
       </header>
       <nav class="topnav" id="admin-nav">
         <button class="on" data-tab="tab-queue"><span class="ic">🪑</span><span data-i18n="nav_queue">File</span></button>
+        <button data-tab="tab-agenda"><span class="ic">📅</span><span data-i18n="nav_agenda">Agenda</span></button>
         <button data-tab="tab-cash"><span class="ic">💰</span><span data-i18n="nav_cash">Caisse</span></button>
         <button data-tab="tab-stats"><span class="ic">📊</span><span data-i18n="nav_stats">Stats</span></button>
         <button data-tab="tab-svc-admin"><span class="ic">✂️</span><span data-i18n="nav_svc">Carte</span></button>
@@ -478,6 +563,11 @@ a.val:hover{color:var(--brass-soft)}
     <div class="screen-tab pad active" id="tab-queue">
       <div class="section-head"><div><div class="eyebrow" data-i18n="queue_eyebrow">Aujourd'hui</div><h2 data-i18n="queue_title">File d'attente</h2></div></div>
       <div id="queue-content"></div>
+    </div>
+
+    <div class="screen-tab pad" id="tab-agenda">
+      <div class="section-head"><div><div class="eyebrow" data-i18n="agenda_eyebrow">Rendez-vous</div><h2 data-i18n="agenda_title">Agenda</h2></div></div>
+      <div id="agenda-content"></div>
     </div>
 
     <div class="screen-tab pad" id="tab-cash">
@@ -515,6 +605,20 @@ a.val:hover{color:var(--brass-soft)}
       <div id="about-admin"></div>
     </div>
   </section>
+
+  <div class="notif-backdrop" id="notif-backdrop" onclick="App.closeNotifs()"></div>
+  <div class="notif-panel" id="notif-panel">
+    <div class="notif-card">
+      <div class="notif-head">
+        <div class="ttl">🔔 <span data-i18n="notif_title">Notifications</span></div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="App.clearNotifs()" data-i18n="notif_clear">Tout effacer</button>
+          <button class="icon-btn" onclick="App.closeNotifs()">✕</button>
+        </div>
+      </div>
+      <div class="notif-list" id="notif-list"></div>
+    </div>
+  </div>
 
   <div class="toast" id="toast"></div>
   <div id="print-area"></div>
@@ -554,7 +658,7 @@ const firebaseConfig = {
    DB.get() lit un cache mémoire (synchrone) ; DB.set() écrit dans Firestore.
    Les écouteurs temps réel (onSnapshot) mettent le cache à jour automatiquement.
    ===================================================================== */
-const COLLECTIONS = ["users","services","bookings","avis","caisses"];
+const COLLECTIONS = ["users","services","bookings","avis","caisses","notifs"];
 const CONFIG_KEYS = ["hours","promo","loyalty","settings"];
 const NO_DELETE   = ["bookings","caisses"];   // jamais supprimés (uniquement ajout/màj)
 const LOCAL_KEYS  = ["lang","session"];        // propres à l'appareil
@@ -642,8 +746,8 @@ const DEFAULT_HOURS = {
 const DEFAULT_PROMO = { active:false, percent:10, days:[2] };   // 2 = mardi
 /* Fidélité : la Nᵉ prestation est offerte */
 const DEFAULT_LOYALTY = { active:false, every:10 };
-/* Réglages divers (URL de l'app, coordonnées du salon) */
-const DEFAULT_SETTINGS = { appUrl:"", phone:"54947435", address:"" };
+/* Réglages divers (URL de l'app, coordonnées du salon, ouverture manuelle) */
+const DEFAULT_SETTINGS = { appUrl:"", phone:"54947435", address:"", open:true };
 
 /* =====================================================================
    TRADUCTIONS
@@ -750,6 +854,37 @@ const I18N = {
     confirm_del_entry:"Supprimer cette prestation de l'historique ?", t_entry_deleted:"Prestation supprimée.",
     confirm_del_caisse:"Supprimer cette clôture ?", t_caisse_updated:"Caisse mise à jour ✓", t_caisse_deleted:"Clôture supprimée.",
     clear_today:"Supprimer l'historique d'aujourd'hui", confirm_clear_today:"Supprimer toutes les prestations terminées d'aujourd'hui ? Action irréversible.", t_today_cleared:"Historique du jour supprimé.",
+    /* --- salon ouvert/fermé (manuel) --- */
+    salon_open_manual:"Le salon accepte les clients.", salon_closed_manual:"Le salon n'accepte pas de clients.",
+    close_salon:"Fermer le salon", open_salon:"Ouvrir le salon",
+    t_salon_opened:"Salon ouvert ✓", t_salon_closed:"Salon fermé ✓",
+    closed_now:"Fermé pour le moment",
+    /* --- rendez-vous (client) --- */
+    nav_rdv:"Rendez-vous", rdv_eyebrow:"Sur rendez-vous", rdv_title:"Prendre rendez-vous",
+    rdv_pick_service:"1. Choisir la prestation", rdv_pick_date:"2. Choisir la date", rdv_pick_time:"3. Choisir l'heure",
+    rdv_confirm:"Réserver ce créneau", rdv_my_title:"Mes rendez-vous", rdv_none:"Aucun rendez-vous à venir",
+    rdv_need_all:"Choisissez une prestation, une date et une heure.", rdv_past:"Ce créneau est déjà passé.",
+    rdv_taken:"Ce créneau est déjà pris. Choisissez-en un autre.",
+    t_rdv_booked:"Rendez-vous confirmé ✓", rdv_at:"à", cancel_rdv:"Annuler",
+    confirm_cancel_rdv:"Annuler ce rendez-vous ?", t_rdv_cancelled:"Rendez-vous annulé.",
+    rdv_choose_day:"Choisissez d'abord une date.", no_slot:"Aucun créneau disponible ce jour.",
+    /* --- agenda (admin) --- */
+    nav_agenda:"Agenda", agenda_eyebrow:"Rendez-vous", agenda_title:"Agenda",
+    agenda_none_day:"Aucun rendez-vous ce jour.", agenda_legend:"● jour avec rendez-vous",
+    rdv_done:"Terminer", rdv_validate:"Valider", rdv_start_now:"Ajouter à la file",
+    t_rdv_validated:"Rendez-vous validé.", t_rdv_done:"Rendez-vous terminé et encaissé.",
+    t_rdv_to_queue:"Client ajouté à la file d'attente.",
+    /* --- notifications --- */
+    notif_title:"Notifications", notif_clear:"Tout effacer", notif_none:"Aucune notification",
+    notif_new_file:"Nouvelle réservation (file)", notif_new_rdv:"Nouveau rendez-vous",
+    notif_enable:"🔔 Activer les alertes sur cet appareil", notif_enabled:"Alertes activées ✓",
+    notif_denied:"Alertes bloquées par le navigateur.", notif_cancel_file:"Réservation annulée",
+    push_new_res:"Nouvelle réservation",
+    /* --- encaissement manuel (caisse) --- */
+    add_manual:"➕ Ajouter un encaissement", manual_title:"Client hors application",
+    manual_name:"Nom du client", manual_name_ph:"Ex : passage rapide", manual_amount:"Montant reçu (DT)",
+    manual_service:"Prestation (optionnel)", manual_service_ph:"Ex : Coupe",
+    t_manual_added:"Encaissement ajouté ✓", manual_need:"Indiquez un nom et un montant valide.",
   },
   ar:{
     splash_sub:"اختر لغتك / Choisissez votre langue", brand_tag:"حلاقة رجالي",
@@ -852,6 +987,37 @@ const I18N = {
     confirm_del_entry:"حذف هذه الخدمة من السجل؟", t_entry_deleted:"تم حذف الخدمة.",
     confirm_del_caisse:"حذف هذا الإغلاق؟", t_caisse_updated:"تم تحديث الصندوق ✓", t_caisse_deleted:"تم حذف الإغلاق.",
     clear_today:"حذف سجل اليوم", confirm_clear_today:"حذف كل خدمات اليوم المنتهية؟ لا يمكن التراجع.", t_today_cleared:"تم حذف سجل اليوم.",
+    /* --- الصالون مفتوح/مغلق (يدوي) --- */
+    salon_open_manual:"الصالون يستقبل الزبائن.", salon_closed_manual:"الصالون لا يستقبل الزبائن.",
+    close_salon:"إغلاق الصالون", open_salon:"فتح الصالون",
+    t_salon_opened:"الصالون مفتوح ✓", t_salon_closed:"الصالون مغلق ✓",
+    closed_now:"مغلق حاليًا",
+    /* --- المواعيد (الزبون) --- */
+    nav_rdv:"موعد", rdv_eyebrow:"بالموعد", rdv_title:"حجز موعد",
+    rdv_pick_service:"١. اختر الخدمة", rdv_pick_date:"٢. اختر التاريخ", rdv_pick_time:"٣. اختر الوقت",
+    rdv_confirm:"تأكيد الموعد", rdv_my_title:"مواعيدي", rdv_none:"لا توجد مواعيد قادمة",
+    rdv_need_all:"اختر خدمة وتاريخًا ووقتًا.", rdv_past:"هذا الوقت قد مضى.",
+    rdv_taken:"هذا الوقت محجوز. اختر وقتًا آخر.",
+    t_rdv_booked:"تم تأكيد الموعد ✓", rdv_at:"على", cancel_rdv:"إلغاء",
+    confirm_cancel_rdv:"إلغاء هذا الموعد؟", t_rdv_cancelled:"تم إلغاء الموعد.",
+    rdv_choose_day:"اختر تاريخًا أولًا.", no_slot:"لا توجد أوقات متاحة في هذا اليوم.",
+    /* --- الأجندة (المسؤول) --- */
+    nav_agenda:"الأجندة", agenda_eyebrow:"المواعيد", agenda_title:"الأجندة",
+    agenda_none_day:"لا توجد مواعيد في هذا اليوم.", agenda_legend:"● يوم به مواعيد",
+    rdv_done:"إنهاء", rdv_validate:"تأكيد", rdv_start_now:"إضافة إلى الطابور",
+    t_rdv_validated:"تم تأكيد الموعد.", t_rdv_done:"تم إنهاء الموعد وتحصيله.",
+    t_rdv_to_queue:"تمت إضافة الزبون إلى الطابور.",
+    /* --- الإشعارات --- */
+    notif_title:"الإشعارات", notif_clear:"مسح الكل", notif_none:"لا توجد إشعارات",
+    notif_new_file:"حجز جديد (طابور)", notif_new_rdv:"موعد جديد",
+    notif_enable:"🔔 تفعيل التنبيهات على هذا الجهاز", notif_enabled:"تم تفعيل التنبيهات ✓",
+    notif_denied:"التنبيهات محظورة من المتصفح.", notif_cancel_file:"تم إلغاء الحجز",
+    push_new_res:"حجز جديد",
+    /* --- تحصيل يدوي (الصندوق) --- */
+    add_manual:"➕ إضافة تحصيل", manual_title:"زبون من خارج التطبيق",
+    manual_name:"اسم الزبون", manual_name_ph:"مثال: زبون سريع", manual_amount:"المبلغ المستلَم (د.ت)",
+    manual_service:"الخدمة (اختياري)", manual_service_ph:"مثال: قص",
+    t_manual_added:"تمت إضافة التحصيل ✓", manual_need:"أدخل اسمًا ومبلغًا صحيحًا.",
   },
 };
 
@@ -1014,6 +1180,8 @@ const App = {
   },
   openAdmin(){
     const u=this.currentUser();
+    this._notifSince=Date.now();
+    this._alerted=new Set();
     document.getElementById("admin-hello").textContent=(this.lang==="ar"?"المسؤول · ":"Gérant · ")+(u?u.nom:"");
     this.show("app-admin"); this.showTab("tab-queue","admin-nav");
   },
@@ -1067,55 +1235,46 @@ const App = {
     const u=this.currentUser(); if(!u) return;
     if(!this.canBookNow()){ this.toast(this.t("closed_cannot_book")); return this.showTab("tab-myturn","client-nav"); }
     const bookings=DB.get("bookings",[]);
-    const active=bookings.find(b=>b.userId===u.id && b.jour===this.today() && ["attente","valide","encours"].includes(b.statut));
+    const active=bookings.find(b=>b.userId===u.id && b.jour===this.today() && b.type!=="rdv" && ["attente","valide","encours"].includes(b.statut));
     if(active){ this.toast(this.t("t_already")); return this.showTab("tab-myturn","client-nav"); }
     const s=this.svc(serviceId); if(!s) return;
     const pr=this.computePrice(s,u);
-    bookings.push({ id:"b"+Date.now(), userId:u.id, clientNom:u.nom,
+    const b={ id:"b"+Date.now(), userId:u.id, clientNom:u.nom, type:"file",
       serviceId:s.id, icon:s.icon, nom_fr:s.fr, nom_ar:s.ar,
       prix:pr.final, prixBase:pr.base, remisePct:pr.remisePct, gratuit:pr.gratuit, duree:s.duree,
-      statut:"attente", jour:this.today(), createdAt:Date.now(), startAt:null, endAt:null });
+      statut:"attente", jour:this.today(), createdAt:Date.now(), startAt:null, endAt:null };
+    bookings.push(b);
     DB.set("bookings",bookings);
+    this.pushNotif("file", b);          // notification interne (cloche)
+    this.notifyAdmin(b);                 // notification téléphone (Vercel)
     this.toast(pr.gratuit?this.t("t_booked_free"):(pr.remisePct?this.t("t_booked_promo")(pr.remisePct):this.t("t_booked")));
     this.showTab("tab-myturn","client-nav");
   },
 
-  /* ---------- horaires : statut du salon ---------- */
-  hours(){ return DB.get("hours", DEFAULT_HOURS); },
-  hm2min(s){ const p=(s||"0:0").split(":"); return (parseInt(p[0],10)||0)*60+(parseInt(p[1],10)||0); },
-  salonStatus(now){
-    now=now||new Date(); const H=this.hours();
-    const ymd=this.today();
-    if((H.feries||[]).includes(ymd)) return {open:false, reason:"closed_holiday"};
-    const dow=now.getDay(); const d=H.days[dow]||H.days[String(dow)];
-    if(!d||!d.open) return {open:false, reason:"closed_today"};
-    const cur=now.getHours()*60+now.getMinutes();
-    const from=this.hm2min(d.from), to=this.hm2min(d.to);
-    if(cur<from) return {open:false, reason:"before", at:d.from};
-    if(cur>=to) return {open:false, reason:"after"};
-    if(d.bfrom && d.bto){ const bf=this.hm2min(d.bfrom), bt=this.hm2min(d.bto);
-      if(cur>=bf && cur<bt) return {open:false, reason:"pause", at:d.bto, until:d.to}; }
-    return {open:true, reason:"open", until:d.to};
+  /* ---------- salon ouvert / fermé (manuel, un seul bouton) ---------- */
+  isSalonOpen(){ return this.salon().open !== false; },
+  salonStatus(){ return this.isSalonOpen() ? {open:true} : {open:false}; },
+  canBookNow(){ return this.isSalonOpen(); },
+  toggleSalon(){
+    const s=this.salon(); const willOpen = !this.isSalonOpen();
+    s.open = willOpen; DB.set("settings", s);
+    this.toast(willOpen ? this.t("t_salon_opened") : this.t("t_salon_closed"));
+    this.renderAll();
   },
-  canBookNow(){
-    const now=new Date(); const H=this.hours(); const ymd=this.today();
-    if((H.feries||[]).includes(ymd)) return false;
-    const d=H.days[now.getDay()]||H.days[String(now.getDay())];
-    if(!d||!d.open) return false;
-    const cur=now.getHours()*60+now.getMinutes();
-    return cur>=this.hm2min(d.from) && cur<this.hm2min(d.to);   // pause = file ouverte
+  salonSwitchHTML(){
+    const open=this.isSalonOpen();
+    return `<div class="salon-switch ${open?"is-open":"is-closed"}">
+      <div class="ss-info"><span class="ss-dot"></span>
+        <div><div class="ss-title">${open?this.t("salon_open"):this.t("salon_closed")}</div>
+          <div class="ss-sub">${open?this.t("salon_open_manual"):this.t("salon_closed_manual")}</div></div></div>
+      <button class="ss-btn ${open?"close":"open"}" onclick="App.toggleSalon()">${open?"🔴 "+this.t("close_salon"):"🟢 "+this.t("open_salon")}</button>
+    </div>`;
   },
   statusBannerHTML(){
-    const s=this.salonStatus();
-    let cls="is-closed", main=this.t("salon_closed"), sub="";
-    if(s.open){ cls="is-open"; main=this.t("salon_open"); sub=this.t("open_until")(s.until); }
-    else if(s.reason==="pause"){ cls="is-pause"; main=this.t("salon_pause"); sub=this.t("back_at")(s.at); }
-    else if(s.reason==="before"){ sub=this.t("opens_at")(s.at); }
-    else if(s.reason==="after"){ sub=this.t("closed_for_today"); }
-    else if(s.reason==="closed_holiday"){ sub=this.t("closed_holiday"); }
-    else { sub=this.t("closed_today"); }
-    return `<div class="status-banner ${cls}"><span class="dot"></span>
-      <div><div class="st-main">${main}</div>${sub?`<div class="st-sub">${sub}</div>`:""}</div></div>`;
+    const open=this.isSalonOpen();
+    return `<div class="status-banner ${open?"is-open":"is-closed"}"><span class="dot"></span>
+      <div><div class="st-main">${open?this.t("salon_open"):this.t("salon_closed")}</div>
+        <div class="st-sub">${open?this.t("salon_open_manual"):this.t("closed_now")}</div></div></div>`;
   },
 
   /* ---------- promotions + fidélité : calcul du prix ---------- */
@@ -1243,7 +1402,7 @@ const App = {
   /* file : ordre + calcul d'attente */
   rank(b){ return b.statut==="encours"?0:b.statut==="valide"?1:2; },
   activeQueue(){
-    return DB.get("bookings",[]).filter(b=>b.jour===this.today() && ["attente","valide","encours"].includes(b.statut))
+    return DB.get("bookings",[]).filter(b=>b.jour===this.today() && b.type!=="rdv" && ["attente","valide","encours"].includes(b.statut))
       .sort((a,b)=>this.rank(a)-this.rank(b)||a.createdAt-b.createdAt);
   },
   computeWait(id){
@@ -1256,7 +1415,7 @@ const App = {
   renderMyTurn(){
     const w=document.getElementById("myturn-content"); if(!w) return;
     const u=this.currentUser(); if(!u) return;
-    const b=DB.get("bookings",[]).find(x=>x.userId===u.id && x.jour===this.today() && ["attente","valide","encours"].includes(x.statut));
+    const b=DB.get("bookings",[]).find(x=>x.userId===u.id && x.jour===this.today() && x.type!=="rdv" && ["attente","valide","encours"].includes(x.statut));
     if(!b){
       const q=this.activeQueue();
       const serving=q.find(x=>x.statut==="encours");
@@ -1315,15 +1474,16 @@ const App = {
       </div>
       ${b.statut!=="encours"?`<button class="btn btn-danger btn-block mt" onclick="App.cancelBooking('${b.id}')">${this.t("cancel")}</button>`:""}`;
   },
-  cancelBooking(id){ this._setStatut(id,"annule"); this.toast(this.t("t_cancelled")); this.renderMyTurn(); },
+  cancelBooking(id){ const b=DB.get("bookings",[]).find(x=>x.id===id); this._setStatut(id,"annule"); if(b) this.pushNotif("cancel", b); this.toast(this.t("t_cancelled")); this.renderMyTurn(); },
 
   /* =================== ADMIN : FILE =================== */
   renderQueue(){
     const w=document.getElementById("queue-content"); if(!w) return;
+    const sw=this.salonSwitchHTML();
     const q=this.activeQueue();
-    if(q.length===0){ w.innerHTML=`<div class="card empty"><div class="ic">🪑</div><div>${this.t("empty_queue")}</div></div>`; return; }
+    if(q.length===0){ w.innerHTML=sw+`<div class="card empty"><div class="ic">🪑</div><div>${this.t("empty_queue")}</div></div>`; return; }
     const hasCur=q.some(x=>x.statut==="encours");
-    w.innerHTML=q.map((b,i)=>{
+    w.innerHTML=sw+q.map((b,i)=>{
       const cur=b.statut==="encours";
       let sub=`${b.icon} ${this.bName(b)} · ${this.fmtMoney(b.prix)} · ⏱ ${this.fmtDur(b.duree)}`;
       if(cur){ const r=Math.max(0,(b.endAt||0)-Date.now()); sub+=` · <strong style="color:var(--garnet-soft)">${this.t("ends_in")} ${this.fmtClock(r)}</strong>`; }
@@ -1348,6 +1508,236 @@ const App = {
     b.duree=m; if(b.statut==="encours"&&b.startAt) b.endAt=b.startAt+m*60000; DB.set("bookings",bs); this.toast(this.t("t_time_saved")); this.renderQueue(); },
   adminCancel(id){ this._setStatut(id,"annule"); this.renderQueue(); },
   _setStatut(id,st){ const bs=DB.get("bookings",[]); const b=bs.find(x=>x.id===id); if(b){ b.statut=st; DB.set("bookings",bs); } },
+
+  /* =================== NOTIFICATIONS (cloche interne + push téléphone) =================== */
+  NOTIFY_URL:"/api/notify",
+  /* push vers le téléphone du gérant via la fonction serverless Vercel (Telegram) */
+  notifyAdmin(b){
+    try{
+      fetch(this.NOTIFY_URL,{ method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ nom:b.clientNom||"", service:b.nom_fr||"", type:b.type||"file", jour:b.jour||"", heure:b.heure||"" })
+      }).catch(()=>{});
+    }catch(e){}
+  },
+  /* crée une notification interne (visible sur la cloche de l'admin, synchronisée Firestore) */
+  pushNotif(kind, b){
+    const n={ id:"n"+Date.now()+Math.floor(Math.random()*1000), kind,
+      nom:b.clientNom||"", service_fr:b.nom_fr||"", service_ar:b.nom_ar||"",
+      jour:b.jour||"", heure:b.heure||"", ts:Date.now(), lu:false };
+    const arr=DB.get("notifs",[]); arr.push(n);
+    DB.set("notifs", arr.slice(-60));   // on ne garde que les 60 dernières
+  },
+  notifsList(){ return DB.get("notifs",[]).slice().sort((a,b)=>(b.ts||0)-(a.ts||0)); },
+  unreadCount(){ return this.notifsList().filter(n=>!n.lu).length; },
+  notifSvcName(n){ return this.lang==="ar" ? (n.service_ar||n.service_fr||"") : (n.service_fr||""); },
+  renderBell(){
+    const badge=document.getElementById("bell-badge");
+    if(badge){ const c=this.unreadCount();
+      if(c>0){ badge.textContent=c>99?"99+":c; badge.style.display="grid"; } else badge.style.display="none"; }
+    this.maybeAlert();
+  },
+  renderNotifsPanel(){
+    const w=document.getElementById("notif-list"); if(!w) return;
+    const enableBtn=`<button class="btn btn-brass btn-block" style="margin-bottom:10px" onclick="App.requestAlerts()">${this.t("notif_enable")}</button>`;
+    const list=this.notifsList();
+    if(list.length===0){ w.innerHTML=enableBtn+`<div class="card empty"><div class="ic">🔔</div><div>${this.t("notif_none")}</div></div>`; return; }
+    const items=list.map(n=>{
+      const isRdv=n.kind==="rdv", isCancel=n.kind==="cancel";
+      const title=isRdv?this.t("notif_new_rdv"):(isCancel?this.t("notif_cancel_file"):this.t("notif_new_file"));
+      const ic=isRdv?"📅":(isCancel?"✖️":"🪑");
+      const when=(isRdv&&n.jour)?`${this.fmtDate(n.jour)} ${this.t("rdv_at")} ${n.heure}`:this.fmtTime(n.ts);
+      return `<div class="notif-item ${n.lu?"":"unread"}"><div class="ni-ic">${ic}</div>
+        <div class="ni-txt"><div class="ni-main"><b>${this.escape(n.nom||"Client")}</b> — ${this.escape(this.notifSvcName(n))}</div>
+          <div class="ni-sub">${title} · ${when}</div></div></div>`;
+    }).join("");
+    w.innerHTML=enableBtn+items;
+  },
+  toggleNotifs(){ const p=document.getElementById("notif-panel"); if(p&&p.classList.contains("show")) this.closeNotifs(); else this.openNotifs(); },
+  openNotifs(){
+    this.renderNotifsPanel();
+    document.getElementById("notif-panel").classList.add("show");
+    document.getElementById("notif-backdrop").classList.add("show");
+    this.markAllRead();
+  },
+  closeNotifs(){
+    const p=document.getElementById("notif-panel"), b=document.getElementById("notif-backdrop");
+    if(p) p.classList.remove("show"); if(b) b.classList.remove("show");
+  },
+  markAllRead(){
+    const arr=DB.get("notifs",[]); let ch=false;
+    arr.forEach(n=>{ if(!n.lu){ n.lu=true; ch=true; } });
+    if(ch) DB.set("notifs",arr);
+    this.renderBell();
+  },
+  clearNotifs(){
+    DB.get("notifs",[]).slice().forEach(n=>DB.del("notifs", n.id));
+    this.renderNotifsPanel(); this.renderBell();
+  },
+  requestAlerts(){
+    if(!("Notification" in window)){ this.toast(this.t("notif_denied")); return; }
+    try{ Notification.requestPermission().then(p=>{ this.toast(p==="granted"?this.t("notif_enabled"):this.t("notif_denied")); }); }
+    catch(e){ this.toast(this.t("notif_denied")); }
+  },
+  /* alerte système (téléphone/tablette) au premier plan quand une nouvelle notif arrive */
+  maybeAlert(){
+    if(!this.isAdmin()) return;
+    if(!("Notification" in window) || Notification.permission!=="granted") return;
+    this._alerted=this._alerted||new Set();
+    const since=this._notifSince||0;
+    this.notifsList().forEach(n=>{
+      if((n.ts||0)>since && !this._alerted.has(n.id)){
+        this._alerted.add(n.id);
+        const isRdv=n.kind==="rdv";
+        const body=(n.nom||"Client")+" — "+this.notifSvcName(n)+((isRdv&&n.jour)?("\n"+this.fmtDate(n.jour)+" "+this.t("rdv_at")+" "+n.heure):"");
+        try{ new Notification("✂️ "+this.t("push_new_res"), { body, icon:"icon-192.png", tag:n.id }); }catch(e){}
+        try{ navigator.vibrate && navigator.vibrate([120,60,120]); }catch(e){}
+      }
+    });
+  },
+
+  /* =================== CLIENT : RENDEZ-VOUS (avec date + heure) =================== */
+  rdvSlots(){ const out=[]; for(let m=9*60;m<=19*60;m+=30){ out.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0")); } return out; },
+  rdvTaken(date){ const set=new Set(); DB.get("bookings",[]).forEach(b=>{ if(b.type==="rdv" && b.jour===date && b.statut!=="annule" && b.heure) set.add(b.heure); }); return set; },
+  rdvSlotsHTML(date){
+    const taken=this.rdvTaken(date), isToday=date===this.today();
+    const now=new Date(), cur=now.getHours()*60+now.getMinutes();
+    let anyFree=false;
+    const slots=this.rdvSlots().map(h=>{
+      const [hh,mm]=h.split(":").map(Number), min=hh*60+mm;
+      const past=isToday && min<=cur, isTaken=taken.has(h), dis=past||isTaken;
+      if(!dis) anyFree=true;
+      const on=(this._rdv&&this._rdv.heure===h);
+      return `<button class="slot ${on?"on":""} ${dis?"taken":""}" ${dis?"disabled":""} onclick="App.pickSlot('${h}')">${h}</button>`;
+    }).join("");
+    return anyFree ? `<div class="slot-grid">${slots}</div>` : `<p class="hint">${this.t("no_slot")}</p>`;
+  },
+  myRdv(u){
+    const today=this.today();
+    return DB.get("bookings",[]).filter(b=>b.type==="rdv" && b.userId===u.id && ["attente","valide","encours"].includes(b.statut) && b.jour>=today)
+      .sort((a,b)=>((a.jour||"")+(a.heure||"")).localeCompare((b.jour||"")+(b.heure||"")));
+  },
+  pickRdvService(id){ this._rdv=this._rdv||{}; this._rdv.serviceId=id; this.renderRdvClient(); },
+  onRdvDate(v){ this._rdv=this._rdv||{}; this._rdv.date=v||this.today(); this._rdv.heure=null; this.renderRdvClient(); },
+  pickSlot(h){ this._rdv=this._rdv||{}; this._rdv.heure=h; this.renderRdvClient(); },
+  renderRdvClient(){
+    const w=document.getElementById("rdv-client-content"); if(!w) return;
+    const u=this.currentUser(); if(!u) return;
+    this._rdv=this._rdv||{serviceId:null, date:this.today(), heure:null};
+    const st=this._rdv;
+    const svcs=this.services().map(s=>`<div class="svc-opt ${st.serviceId===s.id?"on":""}" onclick="App.pickRdvService('${s.id}')">
+        <span class="so-ic">${s.icon}</span><span class="so-nm">${this.svcName(s)}</span>
+        <span class="so-pr">${s.prix} ${this.t("dt")}</span></div>`).join("");
+    const dateInput=`<input class="input" type="date" id="rdv-date" min="${this.today()}" value="${st.date||this.today()}" onchange="App.onRdvDate(this.value)">`;
+    const slotsHTML = st.date ? this.rdvSlotsHTML(st.date) : `<p class="hint">${this.t("rdv_choose_day")}</p>`;
+    const mine=this.myRdv(u);
+    const mineHTML = mine.length ? mine.map(b=>`<div class="rdv-row">
+        <div class="rdv-time">${b.heure||"—"}</div>
+        <div class="rdv-body"><div class="rdv-who">${b.icon} ${this.bName(b)}</div>
+          <div class="rdv-sub">${this.fmtDate(b.jour)} · <span class="tk-status st-${b.statut}">${this.t("status_"+b.statut)}</span></div></div>
+        <div class="acts"><button class="btn btn-danger btn-sm" onclick="App.cancelRdvClient('${b.id}')">${this.t("cancel_rdv")}</button></div>
+      </div>`).join("") : `<div class="card empty"><div class="ic">📅</div><div>${this.t("rdv_none")}</div></div>`;
+
+    w.innerHTML=`<div class="card">
+        <div class="tk-label" style="color:var(--brass-soft);margin-bottom:8px">${this.t("rdv_pick_service")}</div>
+        <div class="svc-pick">${svcs}</div>
+        <div class="tk-label" style="color:var(--brass-soft);margin:16px 0 8px">${this.t("rdv_pick_date")}</div>
+        <div class="field" style="margin:0">${dateInput}</div>
+        <div class="tk-label" style="color:var(--brass-soft);margin:16px 0 8px">${this.t("rdv_pick_time")}</div>
+        ${slotsHTML}
+        <button class="btn btn-primary btn-block mt" onclick="App.bookRdv()">📅 ${this.t("rdv_confirm")}</button>
+      </div>
+      <div class="section-head mt"><h2 style="font-size:1.05rem">${this.t("rdv_my_title")}</h2></div>
+      ${mineHTML}`;
+  },
+  bookRdv(){
+    const u=this.currentUser(); if(!u) return;
+    const st=this._rdv||{};
+    if(!st.serviceId || !st.date || !st.heure) return this.toast(this.t("rdv_need_all"));
+    const when=new Date(st.date+"T"+st.heure+":00");
+    if(isNaN(when.getTime()) || when.getTime()<Date.now()) return this.toast(this.t("rdv_past"));
+    if(this.rdvTaken(st.date).has(st.heure)) return this.toast(this.t("rdv_taken"));
+    const s=this.svc(st.serviceId); if(!s) return;
+    const b={ id:"r"+Date.now(), userId:u.id, clientNom:u.nom, type:"rdv",
+      serviceId:s.id, icon:s.icon, nom_fr:s.fr, nom_ar:s.ar,
+      prix:s.prix, prixBase:s.prix, remisePct:0, gratuit:false, duree:s.duree,
+      statut:"attente", jour:st.date, heure:st.heure, createdAt:Date.now(), startAt:null, endAt:null };
+    const bs=DB.get("bookings",[]); bs.push(b); DB.set("bookings",bs);
+    this.pushNotif("rdv", b); this.notifyAdmin(b);
+    this._rdv={serviceId:null, date:this.today(), heure:null};
+    this.toast(this.t("t_rdv_booked")); this.renderRdvClient();
+  },
+  cancelRdvClient(id){
+    if(!window.confirm(this.t("confirm_cancel_rdv"))) return;
+    const b=DB.get("bookings",[]).find(x=>x.id===id);
+    this._setStatut(id,"annule");
+    if(b) this.pushNotif("cancel", b);
+    this.toast(this.t("t_rdv_cancelled")); this.renderRdvClient();
+  },
+
+  /* =================== ADMIN : AGENDA (calendrier des rendez-vous) =================== */
+  rdvOfDay(ymd){
+    return DB.get("bookings",[]).filter(b=>b.type==="rdv" && b.jour===ymd && b.statut!=="annule")
+      .sort((a,b)=>(a.heure||"").localeCompare(b.heure||""));
+  },
+  agendaShift(dir){ const d=this._agendaMonth?new Date(this._agendaMonth):new Date(); d.setDate(1); d.setMonth(d.getMonth()+dir); this._agendaMonth=d; this.renderAgenda(); },
+  agendaSelect(ymd){ this._agendaSel=ymd; this.renderAgenda(); },
+  renderAgenda(){
+    const w=document.getElementById("agenda-content"); if(!w) return;
+    if(!this._agendaMonth){ const d=new Date(); d.setDate(1); this._agendaMonth=d; }
+    const sel=this._agendaSel || this.today();
+    const base=new Date(this._agendaMonth);
+    const year=base.getFullYear(), month=base.getMonth();
+    const monthName=base.toLocaleDateString(this.lang==="ar"?"ar-TN":"fr-FR",{month:"long",year:"numeric"});
+    const firstDow=(new Date(year,month,1).getDay()+6)%7;   // lundi = 0
+    const daysInMonth=new Date(year,month+1,0).getDate();
+    const dow=this.lang==="ar"?["إث","ثل","أر","خم","جم","سب","أح"]:["Lu","Ma","Me","Je","Ve","Sa","Di"];
+    const counts={};
+    DB.get("bookings",[]).forEach(b=>{ if(b.type==="rdv" && ["attente","valide","encours"].includes(b.statut) && b.jour) counts[b.jour]=(counts[b.jour]||0)+1; });
+    const todayStr=this.today();
+    let cells="";
+    for(let i=0;i<firstDow;i++) cells+=`<div class="cal-cell blank"></div>`;
+    for(let d=1; d<=daysInMonth; d++){
+      const ymd=year+"-"+String(month+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+      const cls=[ymd===todayStr?"today":"", ymd===sel?"sel":"", ymd<todayStr?"past":""].filter(Boolean).join(" ");
+      const c=counts[ymd]||0;
+      cells+=`<div class="cal-cell ${cls}" onclick="App.agendaSelect('${ymd}')">${c?`<span class="cal-cnt">${c}</span>`:""}<span>${d}</span>${c?`<span class="cal-dot"></span>`:""}</div>`;
+    }
+    const cal=`<div class="cal">
+      <div class="cal-head"><button class="cal-nav" onclick="App.agendaShift(-1)">‹</button>
+        <div class="m">${monthName}</div><button class="cal-nav" onclick="App.agendaShift(1)">›</button></div>
+      <div class="cal-grid">${dow.map(x=>`<div class="cal-dow">${x}</div>`).join("")}${cells}</div>
+      <div class="hint" style="margin-top:8px">${this.t("agenda_legend")}</div></div>`;
+
+    const list=this.rdvOfDay(sel);
+    const usersById={}; DB.get("users",[]).forEach(u=>usersById[u.id]=u);
+    const dayHead=`<div class="section-head"><h2 style="font-size:1.05rem;text-transform:capitalize">${this.fmtDate(sel)}</h2></div>`;
+    const rows = list.length ? list.map(b=>{
+      const done=b.statut==="termine";
+      let a="";
+      if(b.statut==="attente") a+=`<button class="btn btn-ok btn-sm" onclick="App.rdvValidate('${b.id}')">${this.t("rdv_validate")}</button>`;
+      if(!done){
+        if(sel===todayStr) a+=`<button class="btn btn-primary btn-sm" onclick="App.rdvToQueue('${b.id}')">${this.t("rdv_start_now")}</button>`;
+        a+=`<button class="btn btn-brass btn-sm" onclick="App.rdvDone('${b.id}')">${this.t("rdv_done")}</button>`;
+        a+=`<button class="btn btn-danger btn-sm" onclick="App.adminCancelRdv('${b.id}')">✕</button>`;
+      }
+      const u=usersById[b.userId]; const tel=(u&&u.tel)?this.phoneFmt(u.tel):"";
+      return `<div class="rdv-row">
+        <div class="rdv-time">${b.heure||"—"}</div>
+        <div class="rdv-body"><div class="rdv-who">${this.escape(b.clientNom||"—")} <span class="tk-status st-${b.statut}" style="font-size:.6rem">${this.t("status_"+b.statut)}</span></div>
+          <div class="rdv-sub">${b.icon} ${this.bName(b)} · ${this.fmtMoney(b.prix)}${tel?` · 📞 ${tel}`:""}</div></div>
+        <div class="acts">${a}</div></div>`;
+    }).join("") : `<div class="card empty"><div class="ic">📅</div><div>${this.t("agenda_none_day")}</div></div>`;
+
+    w.innerHTML=cal+dayHead+rows;
+  },
+  rdvValidate(id){ this._setStatut(id,"valide"); this.toast(this.t("t_rdv_validated")); this.renderAgenda(); },
+  rdvDone(id){ const bs=DB.get("bookings",[]); const b=bs.find(x=>x.id===id); if(!b) return;
+    b.statut="termine"; b.finishedAt=Date.now(); b.encaisse=false; if(b.recu==null) b.recu=b.prix||0;
+    DB.set("bookings",bs); this.toast(this.t("t_rdv_done")); this.renderAll(); },
+  rdvToQueue(id){ const bs=DB.get("bookings",[]); const b=bs.find(x=>x.id===id); if(!b) return;
+    b.type="file"; b.jour=this.today(); b.statut="valide"; b.createdAt=Date.now();
+    DB.set("bookings",bs); this.toast(this.t("t_rdv_to_queue")); this.renderAll(); this.showTab("tab-queue","admin-nav"); },
+  adminCancelRdv(id){ if(!window.confirm(this.t("confirm_cancel_rdv"))) return; this._setStatut(id,"annule"); this.renderAgenda(); },
 
   /* =================== ADMIN : CAISSE =================== */
   renderCash(){
@@ -1393,12 +1783,61 @@ const App = {
         ${open.length?`<div style="margin-top:8px">${openList}</div>`:`<p class="hint mt-s">${this.t("nothing_to_cash")}</p>`}
         <button class="btn btn-brass btn-block mt" onclick="App.closeRegister()" ${nb===0?"disabled":""}>🔒 ${this.t("close_register")}</button></div>
 
+      ${this.manualCashHTML()}
+
       <div class="section-head mt"><h2 style="font-size:1.05rem">${this.t("closures_history")}</h2></div>
       ${closHist}
 
       <div class="section-head mt"><h2 style="font-size:1.05rem">${this.t("clients_history")}</h2></div>
       ${clientsHist}
       ${done.length?`<div class="danger-zone"><button class="btn-danger-soft" onclick="App.clearTodayHistory()">🗑 ${this.t("clear_today")}</button></div>`:""}`;
+  },
+
+  /* --- Encaissement manuel : client servi hors application (nom + montant) --- */
+  manualCashHTML(){
+    const f=this._manualForm||{nom:"",prix:"",svc:""};
+    if(!this._manualOpen){
+      return `<button class="btn btn-ghost btn-block mt" onclick="App.openManualCash()">${this.t("add_manual")}</button>`;
+    }
+    return `<div class="card manual-cash mt">
+      <div class="mc-head">${this.t("manual_title")}</div>
+      <label class="fld"><span>${this.t("manual_name")}</span>
+        <input class="input" id="mc-nom" type="text" placeholder="${this.t("manual_name_ph")}" value="${this.escape(f.nom||"")}" oninput="App._manualField('nom',this.value)"></label>
+      <label class="fld"><span>${this.t("manual_amount")}</span>
+        <input class="input" id="mc-prix" type="number" inputmode="decimal" min="0" step="1" placeholder="0" value="${this.escape(String(f.prix||""))}" oninput="App._manualField('prix',this.value)"></label>
+      <label class="fld"><span>${this.t("manual_service")}</span>
+        <input class="input" id="mc-svc" type="text" placeholder="${this.t("manual_service_ph")}" value="${this.escape(f.svc||"")}" oninput="App._manualField('svc',this.value)"></label>
+      <div class="mc-actions">
+        <button class="btn btn-ghost" onclick="App.closeManualCash()">${this.t("cancel_btn")}</button>
+        <button class="btn btn-brass" onclick="App.saveManualCash()">${this.t("save")}</button>
+      </div></div>`;
+  },
+  _manualField(k,v){ this._manualForm=this._manualForm||{nom:"",prix:"",svc:""}; this._manualForm[k]=v; },
+  openManualCash(){ this._manualOpen=true; this._manualForm={nom:"",prix:"",svc:""}; this.renderCash();
+    setTimeout(()=>{ const el=document.getElementById("mc-nom"); if(el) el.focus(); },30); },
+  closeManualCash(){ this._manualOpen=false; this._manualForm=null; this.renderCash(); },
+  saveManualCash(){
+    const f=this._manualForm||{};
+    const nom=(f.nom||"").trim();
+    const prix=Math.round(parseFloat(String(f.prix||"").replace(",","."))||0);
+    if(!nom || prix<=0){ this.toast(this.t("manual_need")); return; }
+    const svc=(f.svc||"").trim();
+    const now=Date.now();
+    const bs=DB.get("bookings",[]);
+    bs.push({
+      id:"m"+now, userId:null, manuel:true, type:"manuel",
+      clientNom:nom, serviceId:null, icon:"➕",
+      nom_fr:svc||"Encaissement", nom_ar:svc||"تحصيل",
+      prix:prix, prixBase:prix, remisePct:0, gratuit:false, duree:0,
+      statut:"termine", jour:this.today(),
+      createdAt:now, startAt:now, endAt:now, finishedAt:now,
+      encaisse:false, recu:prix
+    });
+    DB.set("bookings",bs);
+    this._manualOpen=false; this._manualForm=null;
+    this.recomputeCaisses();
+    this.toast(this.t("t_manual_added"));
+    this.renderAll();
   },
 
   /* modifier le montant encaissé (prix + pourboire) — la clôture du jour se met à jour */
@@ -1654,35 +2093,14 @@ const App = {
   /* =================== RÉGLAGES =================== */
   renderSettings(){
     const w=document.getElementById("settings-content"); if(!w) return;
-    const H=this.hours(), P=DB.get("promo",DEFAULT_PROMO), L=DB.get("loyalty",DEFAULT_LOYALTY);
+    const P=DB.get("promo",DEFAULT_PROMO), L=DB.get("loyalty",DEFAULT_LOYALTY);
     const url=this.appUrl();
     if(this._promoDaysSel===null) this._promoDaysSel=(P.days||[]).slice();
-    const dabbr=this.t("days_abbr"), dfull=this.t("days_full"), order=[1,2,3,4,5,6,0];
+    const dabbr=this.t("days_abbr"), order=[1,2,3,4,5,6,0];
 
     const share=`<div class="card set-card"><div class="hd">📲 ${this.t("set_share")}</div>
       <div class="qr-box">${this.qrImg(url,6)}<div class="cap">${this.t("set_share_hint")}</div></div>
       <div class="url-row"><div class="u">${this.escape(url)}</div><button class="btn btn-ghost btn-sm" onclick="App.copyAppUrl()">${this.t("copy")}</button></div></div>`;
-
-    const rows=order.map(i=>{
-      const d=H.days[i]||H.days[String(i)]||{open:false,from:"09:00",to:"19:00",bfrom:"",bto:""};
-      return `<div class="day-row" data-day="${i}">
-        <label class="day-name" style="display:flex;align-items:center;gap:8px">
-          <span class="switch"><input type="checkbox" class="d-open" ${d.open?"checked":""} onchange="this.closest('.day-row').querySelector('.day-times').classList.toggle('off',!this.checked)"><span class="slider-sw"></span></span>${dfull[i]}</label>
-        <div class="day-times ${d.open?"":"off"}">
-          <div class="time-field"><span>${this.t("h_open")}</span><input type="time" class="d-from" value="${d.from||'09:00'}"></div>
-          <div class="time-field"><span>${this.t("h_close")}</span><input type="time" class="d-to" value="${d.to||'19:00'}"></div>
-          <div class="time-field"><span>${this.t("h_break_from")}</span><input type="time" class="d-bfrom" value="${d.bfrom||''}"></div>
-          <div class="time-field"><span>${this.t("h_break_to")}</span><input type="time" class="d-bto" value="${d.bto||''}"></div>
-        </div></div>`;
-    }).join("");
-    const hours=`<div class="card set-card"><div class="hd">🕒 ${this.t("set_hours")}</div>${rows}
-      <button class="btn btn-brass btn-block" style="margin-top:14px" onclick="App.saveHours()">${this.t("save_hours")}</button></div>`;
-
-    const fl=(H.feries||[]).slice().sort();
-    const feries=`<div class="card set-card"><div class="hd">📅 ${this.t("set_holidays")}</div>
-      ${fl.length?fl.map(f=>`<div class="ferie-row"><span class="d">${this.fmtDate(f)}</span><button class="btn btn-ghost btn-sm" onclick="App.removeHoliday('${f}')">✕</button></div>`).join("")
-        :`<div class="hint">${this.t("no_holidays")}</div>`}
-      <div class="inline-add"><input type="date" id="ferie-input"><button class="btn btn-brass btn-sm" onclick="App.addHoliday()">${this.t("add_holiday")}</button></div></div>`;
 
     const days=order.map(i=>`<button class="${this._promoDaysSel.includes(i)?"on":""}" onclick="App.togglePromoDay(${i})">${dabbr[i]}</button>`).join("");
     const promo=`<div class="card set-card"><div class="hd">🎉 ${this.t("set_promo")}</div>
@@ -1704,7 +2122,7 @@ const App = {
       <div class="field"><label>${this.t("contact_address")}</label><input id="set-address" type="text" placeholder="${this.t("address_hint")}" value="${this.escape(sInfo.address||'')}"></div>
       <button class="btn btn-brass btn-block" onclick="App.saveSalonInfo()">${this.t("save_contact")}</button></div>`;
 
-    w.innerHTML=share+contact+hours+feries+promo+loyalty;
+    w.innerHTML=share+contact+promo+loyalty;
   },
   saveSalonInfo(){
     const s=this.salon();
@@ -1712,21 +2130,6 @@ const App = {
     s.address=(document.getElementById("set-address").value||"").trim();
     DB.set("settings", s); this.toast(this.t("t_contact_saved")); this.renderAll();
   },
-  saveHours(){
-    const H=this.hours();
-    document.querySelectorAll("#settings-content .day-row").forEach(row=>{
-      const i=row.dataset.day;
-      H.days[i]={ open:row.querySelector(".d-open").checked,
-        from:row.querySelector(".d-from").value||"09:00", to:row.querySelector(".d-to").value||"19:00",
-        bfrom:row.querySelector(".d-bfrom").value||"", bto:row.querySelector(".d-bto").value||"" };
-    });
-    DB.set("hours",H); this.toast(this.t("t_hours_saved")); this.renderAll();
-  },
-  addHoliday(){ const v=document.getElementById("ferie-input").value; if(!v) return;
-    const H=this.hours(); H.feries=H.feries||[]; if(!H.feries.includes(v)) H.feries.push(v);
-    DB.set("hours",H); this.toast(this.t("t_holiday_added")); this.renderSettings(); this.renderMyTurn(); this.renderServices(); },
-  removeHoliday(d){ const H=this.hours(); H.feries=(H.feries||[]).filter(x=>x!==d);
-    DB.set("hours",H); this.toast(this.t("t_holiday_removed")); this.renderSettings(); this.renderMyTurn(); this.renderServices(); },
   togglePromoDay(i){ this._promoDaysSel=this._promoDaysSel||[];
     const k=this._promoDaysSel.indexOf(i); if(k>=0) this._promoDaysSel.splice(k,1); else this._promoDaysSel.push(i);
     const order=[1,2,3,4,5,6,0];
@@ -1746,7 +2149,9 @@ const App = {
     this.renderServices(); this.renderMyTurn(); this.renderQueue(); this.renderCash();
     this.renderSvcAdmin(); this.renderUsers(); this.renderReviews();
     this.renderStats(); this.renderSettings();
+    this.renderRdvClient(); this.renderAgenda(); this.renderBell();
     this.renderAbout("client"); this.renderAbout("admin");
+    this.maybeAlert();
   },
   tick(){
     if(!this.session) return;
