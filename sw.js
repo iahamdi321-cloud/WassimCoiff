@@ -1,5 +1,44 @@
-/* Wassim Coiff — service worker (mode hors-ligne + mises à jour automatiques) */
-const CACHE = "wassim-coiff-v7";
+/* Wassim Coiff — service worker (hors-ligne + mises à jour + notifications push FCM) */
+
+/* ===== Firebase Cloud Messaging : reçoit les notifications push ===== */
+importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js");
+try {
+  firebase.initializeApp({
+    apiKey: "AIzaSyBnZE79sUdRB8LNxjTT1nEv4my6z8f_fiI",
+    authDomain: "wassim-coiff.firebaseapp.com",
+    projectId: "wassim-coiff",
+    storageBucket: "wassim-coiff.firebasestorage.app",
+    messagingSenderId: "955136785150",
+    appId: "1:955136785150:web:3a158aa29fa173ff4cc3af"
+  });
+  const messaging = firebase.messaging();
+  // notification reçue quand l'app est FERMÉE / en arrière-plan
+  messaging.onBackgroundMessage((payload) => {
+    const d = payload.data || {};
+    self.registration.showNotification(d.title || "\u2702\uFE0F Wassim Coiff", {
+      body: d.body || "",
+      icon: "icon-192.png",
+      badge: "icon-192.png",
+      tag: d.tag || "wassim-notif",
+      data: { url: d.url || "./index.html" }
+    });
+  });
+} catch (e) { /* messaging indisponible : l'app fonctionne quand même */ }
+
+// clic sur la notification -> ouvre (ou ramène au premier plan) l'application
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "./index.html";
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const c of list) { if ("focus" in c) return c.focus(); }
+      if (clients.openWindow) return clients.openWindow(url);
+    })
+  );
+});
+
+const CACHE = "wassim-coiff-v8";
 const SHELL = [
   "./",
   "./index.html",
