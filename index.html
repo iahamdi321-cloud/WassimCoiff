@@ -20,6 +20,7 @@
 <!-- Firebase (base de données temps réel Firestore) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" crossorigin="anonymous"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js" crossorigin="anonymous"></script>
 
 <!-- =====================================================================
   LE GRÉNAT — Application salon de coiffure homme (FR / العربية)
@@ -1521,7 +1522,7 @@ const App = {
 
   /* =================== NOTIFICATIONS (cloche interne + push téléphone) =================== */
   NOTIFY_URL:"/api/notify",
-  /* push vers le téléphone du gérant via la fonction serverless Vercel (Telegram) */
+  /* push vers le téléphone du gérant via la fonction serverless Vercel (Firebase Cloud Messaging) */
   notifyAdmin(b){
     try{
       fetch(this.NOTIFY_URL,{ method:"POST", headers:{"Content-Type":"application/json"},
@@ -1594,31 +1595,55 @@ const App = {
     DB.get("notifs",[]).slice().forEach(n=>DB.del("notifs", n.id));
     this.renderNotifsPanel(); this.renderBell();
   },
-  requestAlerts(){
+  VAPID_KEY:"BFu7v6KYFzUHqkQotcX6mF_IK4Ehe8iCkr0h40Jjqh9hf-tGOzfAfvZ8GRd7XLiovhsM6HYPjAlRJvBhB3K-HxA",
+  /* Active les notifications push (Firebase Cloud Messaging) sur CE téléphone */
+  async requestAlerts(){
     if(!("Notification" in window)){ this.toast(this.t("notif_denied")); return; }
-    try{ Notification.requestPermission().then(p=>{ this.toast(p==="granted"?this.t("notif_enabled"):this.t("notif_denied")); }); }
-    catch(e){ this.toast(this.t("notif_denied")); }
+    try{
+      const perm = await Notification.requestPermission();
+      if(perm!=="granted"){ this.toast(this.t("notif_denied")); return; }
+      let messaging;
+      try{ messaging = firebase.messaging(); }catch(e){ this.toast(this.t("notif_denied")); return; }
+      let reg = this._swReg;
+      if(!reg && navigator.serviceWorker){ try{ reg = await navigator.serviceWorker.ready; }catch(e){} }
+      const token = await messaging.getToken({ vapidKey:this.VAPID_KEY, serviceWorkerRegistration:reg||undefined });
+      if(!token){ this.toast(this.t("notif_denied")); return; }
+      await this.savePushToken(token);
+      this.bindForegroundPush(messaging);
+      this.toast(this.t("notif_enabled"));
+    }catch(e){ console.warn("push:", e); this.toast(this.t("notif_denied")); }
   },
-  /* alerte système (téléphone/tablette) au premier plan quand une nouvelle notif arrive */
-  maybeAlert(){
-    if(!this.isAdmin()) return;
-    if(!("Notification" in window) || Notification.permission!=="granted") return;
-    this._alerted=this._alerted||new Set();
-    const since=this._notifSince||0;
-    this.notifsList().forEach(n=>{
-      if((n.ts||0)>since && !this._alerted.has(n.id)){
-        this._alerted.add(n.id);
-        const isRdv=n.kind==="rdv";
-        const body=(n.nom||"Client")+" — "+this.notifSvcName(n)+((isRdv&&n.jour)?("\n"+this.fmtDate(n.jour)+" "+this.t("rdv_at")+" "+n.heure):"");
+  /* enregistre le jeton de ce téléphone pour le gérant (plusieurs appareils possibles) */
+  async savePushToken(token){
+    try{
+      if(!DB.db) return;
+      await DB.db.collection("fcmTokens").doc("admin").set({
+        tokens: firebase.firestore.FieldValue.arrayUnion(token),
+        updatedAt: new Date().toISOString()
+      }, { merge:true });
+    }catch(e){ console.warn("savePushToken:", e); }
+  },
+  /* notification affichée quand l'app est OUVERTE au premier plan */
+  bindForegroundPush(messaging){
+    if(this._fgBound) return; this._fgBound = true;
+    try{
+      messaging.onMessage((payload)=>{
+        const d = payload.data || {};
         try{
-          const notif=new Notification("✂️ "+this.t("push_new_res"), { body, icon:"icon-192.png", tag:n.id });
-          notif.onclick=()=>{ try{ window.focus(); }catch(_){}
-            this.goToNotif(n.kind||"file", n.jour||""); try{ notif.close(); }catch(_){} };
+          if(Notification.permission==="granted"){
+            const n = new Notification(d.title || ("\u2702\uFE0F "+this.t("push_new_res")), { body:d.body||"", icon:"icon-192.png", tag:d.tag||"wassim" });
+            n.onclick=()=>{ try{ window.focus(); }catch(_){} this.goToNotif(d.kind||"file", d.jour||""); try{ n.close(); }catch(_){} };
+          }
         }catch(e){}
         try{ navigator.vibrate && navigator.vibrate([120,60,120]); }catch(e){}
-      }
-    });
+        this.renderBell();
+      });
+    }catch(e){}
   },
+  /* alerte système (téléphone/tablette) au premier plan quand une nouvelle notif arrive */
+  /* (Remplacé) Les alertes système passent désormais par Firebase Cloud Messaging :
+     voir requestAlerts() et bindForegroundPush(). Conservé vide pour les appels existants. */
+  maybeAlert(){ /* no-op */ },
 
   /* =================== CLIENT : RENDEZ-VOUS (date + heure) =================== */
   rdvTaken(date){ const set=new Set(); DB.get("bookings",[]).forEach(b=>{ if(b.type==="rdv" && b.jour===date && b.statut!=="annule" && b.heure) set.add(b.heure); }); return set; },
@@ -2238,6 +2263,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     }
     window.addEventListener("load",()=>{
       navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then((reg)=>{
+        App._swReg = reg;
         reg.update();
         // si une nouvelle version est déjà en attente, on l'active tout de suite
         if(reg.waiting) reg.waiting.postMessage("skip");
