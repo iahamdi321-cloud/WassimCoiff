@@ -1,5 +1,5 @@
 /* Wassim Coiff — service worker (mode hors-ligne + mises à jour automatiques) */
-const CACHE = "wassim-coiff-v6";
+const CACHE = "wassim-coiff-v7";
 const SHELL = [
   "./",
   "./index.html",
