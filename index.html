@@ -370,17 +370,28 @@ a.val:hover{color:var(--brass-soft)}
 /* ===== Bouton unique Ouvrir / Fermer le salon (admin) ===== */
 .salon-switch{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:16px;border-radius:var(--radius);margin-bottom:16px;border:1px solid var(--line)}
 .salon-switch.is-open{background:linear-gradient(135deg,rgba(95,164,106,.16),rgba(95,164,106,.05));border-color:rgba(95,164,106,.45)}
+.salon-switch.is-busy{background:linear-gradient(135deg,rgba(217,138,61,.16),rgba(217,138,61,.05));border-color:rgba(217,138,61,.45)}
 .salon-switch.is-closed{background:linear-gradient(135deg,rgba(194,75,75,.16),rgba(194,75,75,.05));border-color:rgba(194,75,75,.45)}
 .salon-switch .ss-info{display:flex;align-items:center;gap:12px}
 .salon-switch .ss-dot{width:13px;height:13px;border-radius:50%;flex:none}
 .salon-switch.is-open .ss-dot{background:var(--ok);box-shadow:0 0 0 4px rgba(95,164,106,.22)}
+.salon-switch.is-busy .ss-dot{background:var(--warn);box-shadow:0 0 0 4px rgba(217,138,61,.22)}
 .salon-switch.is-closed .ss-dot{background:var(--danger);box-shadow:0 0 0 4px rgba(194,75,75,.22)}
+.salon-switch .ss-btns{display:flex;gap:8px;flex-wrap:wrap}
 .salon-switch .ss-title{font-family:var(--display);text-transform:uppercase;letter-spacing:.06em;font-weight:600;font-size:1.05rem}
 .salon-switch .ss-sub{font-size:.76rem;color:var(--muted)}
 .ss-btn{font-family:var(--display);letter-spacing:.06em;text-transform:uppercase;font-weight:700;font-size:.82rem;border:0;border-radius:11px;padding:12px 20px;cursor:pointer;transition:.16s;color:#fff}
 .ss-btn:active{transform:scale(.97)}
 .ss-btn.close{background:linear-gradient(180deg,#d15b5b,var(--danger));box-shadow:0 6px 16px rgba(194,75,75,.4)}
 .ss-btn.open{background:linear-gradient(180deg,#6fb87a,var(--ok));box-shadow:0 6px 16px rgba(95,164,106,.4)}
+.ss-btn.busy{background:linear-gradient(180deg,#e0a05a,var(--warn));box-shadow:0 6px 16px rgba(217,138,61,.4)}
+
+/* ===== créneaux déjà réservés (vue client, sans nom) ===== */
+.taken-slots{margin-top:14px;padding:12px 14px;border-radius:var(--radius);border:1px solid var(--line);background:rgba(244,237,226,.03)}
+.slot-wrap{display:flex;flex-wrap:wrap;gap:8px}
+.slot-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--display);font-size:.74rem;letter-spacing:.03em;font-weight:600;padding:6px 11px;border-radius:999px}
+.slot-chip.taken{background:rgba(194,75,75,.14);color:#e39a9a;border:1px solid rgba(194,75,75,.4)}
+.slot-chip.taken::before{content:"🔒";font-size:.72rem}
 
 /* ===== Calendrier / Agenda (RDV) ===== */
 .cal{background:linear-gradient(180deg,var(--bg-2),#1b1310);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px}
@@ -750,7 +761,7 @@ const DEFAULT_PROMO = { active:false, percent:10, days:[2] };   // 2 = mardi
 /* Fidélité : la Nᵉ prestation est offerte */
 const DEFAULT_LOYALTY = { active:false, every:10 };
 /* Réglages divers (URL de l'app, coordonnées du salon, ouverture manuelle) */
-const DEFAULT_SETTINGS = { appUrl:"", phone:"54947435", address:"", open:true };
+const DEFAULT_SETTINGS = { appUrl:"", phone:"54947435", address:"", open:true, busy:false, busyUntil:null };
 
 /* =====================================================================
    TRADUCTIONS
@@ -858,11 +869,28 @@ const I18N = {
     confirm_del_caisse:"Supprimer cette clôture ?", t_caisse_updated:"Caisse mise à jour ✓", t_caisse_deleted:"Clôture supprimée.",
     clear_today:"Supprimer l'historique d'aujourd'hui", confirm_clear_today:"Supprimer toutes les prestations terminées d'aujourd'hui ? Action irréversible.", t_today_cleared:"Historique du jour supprimé.",
     clear_all:"Vider tout l'historique", confirm_clear_all:"Vider TOUT l'historique (clients servis + clôtures) ? Action irréversible.", t_all_cleared:"Historique entièrement vidé.",
-    /* --- salon ouvert/fermé (manuel) --- */
+    /* --- salon ouvert/fermé/occupé (manuel) --- */
     salon_open_manual:"Le salon accepte les clients.", salon_closed_manual:"Le salon n'accepte pas de clients.",
+    salon_busy:"Salon occupé", salon_busy_manual:"En train de servir un client — réservation en pause.",
     close_salon:"Fermer le salon", open_salon:"Ouvrir le salon",
+    busy_salon:"Occupé", free_salon:"Libérer",
     t_salon_opened:"Salon ouvert ✓", t_salon_closed:"Salon fermé ✓",
-    closed_now:"Fermé pour le moment",
+    t_salon_busy:"Salon occupé ✓", t_salon_free:"Salon de nouveau libre ✓",
+    closed_now:"Fermé pour le moment", busy_now:"Occupé pour le moment",
+    busy_cannot_book:"Le salon est occupé : réservation impossible pour le moment.",
+    /* --- occupé : durée estimée + disponibilité affichée au client --- */
+    busy_ask_duration:"Occupé pendant combien de minutes environ ? (laisser vide si inconnu)",
+    busy_free_in:"Disponible dans environ",
+    busy_free_at:"Disponible vers",
+    busy_free_soon:"Disponible sous peu",
+    minutes_short:"min",
+    /* --- créneaux déjà réservés (visible par les autres clients, sans le nom) --- */
+    rdv_taken_slots:"Créneaux déjà réservés ce jour",
+    rdv_slot_reserved:"Réservé", rdv_no_taken:"Aucun créneau réservé ce jour.",
+    rdv_slot_until:"jusqu'à",
+    rdv_pick_day_first:"Choisissez d'abord une date pour voir les créneaux réservés.",
+    /* --- liste des comptes (agenda + caisse) --- */
+    client_from_accounts:"Choisir un compte client",
     /* --- rendez-vous (client) --- */
     nav_rdv:"Rendez-vous", rdv_eyebrow:"Sur rendez-vous", rdv_title:"Prendre rendez-vous",
     rdv_pick_service:"1. Choisir la prestation", rdv_pick_date:"2. Choisir la date", rdv_pick_time:"3. Choisir l'heure",
@@ -995,11 +1023,28 @@ const I18N = {
     confirm_del_caisse:"حذف هذا الإغلاق؟", t_caisse_updated:"تم تحديث الصندوق ✓", t_caisse_deleted:"تم حذف الإغلاق.",
     clear_today:"حذف سجل اليوم", confirm_clear_today:"حذف كل خدمات اليوم المنتهية؟ لا يمكن التراجع.", t_today_cleared:"تم حذف سجل اليوم.",
     clear_all:"حذف كل السجل", confirm_clear_all:"حذف كل السجل (الزبائن + الإغلاقات)؟ لا يمكن التراجع.", t_all_cleared:"تم حذف كل السجل.",
-    /* --- الصالون مفتوح/مغلق (يدوي) --- */
+    /* --- الصالون مفتوح/مغلق/مشغول (يدوي) --- */
     salon_open_manual:"الصالون يستقبل الزبائن.", salon_closed_manual:"الصالون لا يستقبل الزبائن.",
+    salon_busy:"الصالون مشغول", salon_busy_manual:"يخدم زبونًا حاليًا — الحجز متوقف مؤقتًا.",
     close_salon:"إغلاق الصالون", open_salon:"فتح الصالون",
+    busy_salon:"مشغول", free_salon:"تحرير",
     t_salon_opened:"الصالون مفتوح ✓", t_salon_closed:"الصالون مغلق ✓",
-    closed_now:"مغلق حاليًا",
+    t_salon_busy:"الصالون مشغول ✓", t_salon_free:"الصالون متاح من جديد ✓",
+    closed_now:"مغلق حاليًا", busy_now:"مشغول حاليًا",
+    busy_cannot_book:"الصالون مشغول: لا يمكن الحجز حاليًا.",
+    /* --- مشغول: المدة المقدّرة + وقت التوفر المعروض للزبون --- */
+    busy_ask_duration:"مشغول لمدة كم دقيقة تقريبًا؟ (اتركه فارغًا إذا غير معروف)",
+    busy_free_in:"متاح خلال حوالي",
+    busy_free_at:"متاح نحو",
+    busy_free_soon:"متاح قريبًا",
+    minutes_short:"د",
+    /* --- الأوقات المحجوزة (يراها بقية الزبائن دون الاسم) --- */
+    rdv_taken_slots:"الأوقات المحجوزة في هذا اليوم",
+    rdv_slot_reserved:"محجوز", rdv_no_taken:"لا توجد أوقات محجوزة في هذا اليوم.",
+    rdv_slot_until:"حتى",
+    rdv_pick_day_first:"اختر تاريخًا أولًا لعرض الأوقات المحجوزة.",
+    /* --- قائمة الحسابات (الأجندة + الصندوق) --- */
+    client_from_accounts:"اختر حساب زبون",
     /* --- المواعيد (الزبون) --- */
     nav_rdv:"موعد", rdv_eyebrow:"بالموعد", rdv_title:"حجز موعد",
     rdv_pick_service:"١. اختر الخدمة", rdv_pick_date:"٢. اختر التاريخ", rdv_pick_time:"٣. اختر الوقت",
@@ -1199,6 +1244,15 @@ const App = {
 
   /* =================== PRESTATIONS =================== */
   services(){ return DB.get("services", DEFAULT_SERVICES); },
+  /* noms des comptes clients (pour remplir auto les champs "client" — agenda & caisse) */
+  accountNames(){
+    const seen=new Set(); const out=[];
+    DB.get("users",[]).forEach(u=>{ const n=(u.nom||"").trim(); if(n && !seen.has(n.toLowerCase())){ seen.add(n.toLowerCase()); out.push(n); } });
+    return out.sort((a,b)=>a.localeCompare(b));
+  },
+  accountDatalist(id){
+    return `<datalist id="${id}">${this.accountNames().map(n=>`<option value="${this.escape(n)}"></option>`).join("")}</datalist>`;
+  },
   svc(id){ return this.services().find(s=>s.id===id); },
   svcName(s){ return this.lang==="ar"?s.ar:s.fr; },
   svcDesc(s){ return this.lang==="ar"?s.dar:s.dfr; },
@@ -1244,7 +1298,7 @@ const App = {
 
   book(serviceId){
     const u=this.currentUser(); if(!u) return;
-    if(!this.canBookNow()){ this.toast(this.t("closed_cannot_book")); return this.showTab("tab-myturn","client-nav"); }
+    if(!this.canBookNow()){ this.toast(this.isSalonBusy()?this.t("busy_cannot_book"):this.t("closed_cannot_book")); return this.showTab("tab-myturn","client-nav"); }
     const bookings=DB.get("bookings",[]);
     const active=bookings.find(b=>b.userId===u.id && b.jour===this.today() && b.type!=="rdv" && ["attente","valide","encours"].includes(b.statut));
     if(active){ this.toast(this.t("t_already")); return this.showTab("tab-myturn","client-nav"); }
@@ -1262,30 +1316,69 @@ const App = {
     this.showTab("tab-myturn","client-nav");
   },
 
-  /* ---------- salon ouvert / fermé (manuel, un seul bouton) ---------- */
-  isSalonOpen(){ return this.salon().open !== false; },
-  salonStatus(){ return this.isSalonOpen() ? {open:true} : {open:false}; },
-  canBookNow(){ return this.isSalonOpen(); },
-  toggleSalon(){
-    const s=this.salon(); const willOpen = !this.isSalonOpen();
-    s.open = willOpen; DB.set("settings", s);
-    this.toast(willOpen ? this.t("t_salon_opened") : this.t("t_salon_closed"));
+  /* ---------- salon : 3 états manuels — ouvert / occupé / fermé ---------- */
+  /* état stocké dans settings : open (bool) + busy (bool) + busyUntil (timestamp, optionnel).
+     "occupé" = ouvert mais busy=true ; busyUntil sert à indiquer au client quand ce sera libre. */
+  salonState(){ const s=this.salon(); if(s.open===false) return "closed"; if(s.busy===true) return "busy"; return "open"; },
+  isSalonOpen(){ return this.salonState()==="open"; },           // vraiment disponible (réservations OK)
+  isSalonBusy(){ return this.salonState()==="busy"; },
+  isSalonClosed(){ return this.salonState()==="closed"; },
+  canBookNow(){ return this.salonState()==="open"; },            // ni fermé ni occupé
+  /* minutes restantes avant disponibilité (null si inconnu ou déjà écoulé) */
+  busyRemainMin(){
+    const s=this.salon(); if(!s.busyUntil) return null;
+    const ms=s.busyUntil-Date.now(); if(ms<=0) return 0;
+    return Math.ceil(ms/60000);
+  },
+  /* texte de disponibilité affiché au client quand le salon est occupé */
+  busyAvailText(){
+    const s=this.salon(); if(!s.busyUntil) return this.t("busy_now");
+    const rem=this.busyRemainMin();
+    if(rem===0) return this.t("busy_free_soon");
+    return `${this.t("busy_free_in")} ${rem} ${this.t("minutes_short")} · ${this.t("busy_free_at")} ${this.fmtTime(s.busyUntil)}`;
+  },
+  setSalonState(state){
+    const s=this.salon();
+    if(state==="open"){ s.open=true; s.busy=false; s.busyUntil=null; this.toast(this.t("t_salon_opened")); }
+    else if(state==="busy"){
+      s.open=true; s.busy=true;
+      /* on demande une durée estimée pour informer le client (facultatif) */
+      const v=window.prompt(this.t("busy_ask_duration"), "30");
+      if(v===null){ return; }  // annulation : on ne change rien
+      const min=parseInt(String(v).replace(/[^\d]/g,""),10);
+      s.busyUntil = (!isNaN(min) && min>0) ? Date.now()+min*60000 : null;
+      this.toast(this.t("t_salon_busy"));
+    }
+    else { s.open=false; s.busy=false; s.busyUntil=null; this.toast(this.t("t_salon_closed")); }
+    DB.set("settings", s);
     this.renderAll();
   },
   salonSwitchHTML(){
-    const open=this.isSalonOpen();
-    return `<div class="salon-switch ${open?"is-open":"is-closed"}">
+    const st=this.salonState();
+    const title = st==="open"?this.t("salon_open"):st==="busy"?this.t("salon_busy"):this.t("salon_closed");
+    /* pour l'admin : rappel du temps restant estimé sous l'état occupé */
+    let sub   = st==="open"?this.t("salon_open_manual"):st==="busy"?this.t("salon_busy_manual"):this.t("salon_closed_manual");
+    if(st==="busy"){ const rem=this.busyRemainMin(); if(rem!==null && rem>0) sub+=` — ${this.t("busy_free_in")} ${rem} ${this.t("minutes_short")}`; }
+    const cls   = st==="open"?"is-open":st==="busy"?"is-busy":"is-closed";
+    /* boutons : on affiche les actions vers les autres états (l'état courant est masqué) */
+    let btns="";
+    if(st!=="open")   btns+=`<button class="ss-btn open" onclick="App.setSalonState('open')">🟢 ${this.t("open_salon")}</button>`;
+    if(st!=="busy")   btns+=`<button class="ss-btn busy" onclick="App.setSalonState('busy')">🟠 ${this.t("busy_salon")}</button>`;
+    if(st!=="closed") btns+=`<button class="ss-btn close" onclick="App.setSalonState('closed')">🔴 ${this.t("close_salon")}</button>`;
+    return `<div class="salon-switch ${cls}">
       <div class="ss-info"><span class="ss-dot"></span>
-        <div><div class="ss-title">${open?this.t("salon_open"):this.t("salon_closed")}</div>
-          <div class="ss-sub">${open?this.t("salon_open_manual"):this.t("salon_closed_manual")}</div></div></div>
-      <button class="ss-btn ${open?"close":"open"}" onclick="App.toggleSalon()">${open?"🔴 "+this.t("close_salon"):"🟢 "+this.t("open_salon")}</button>
+        <div><div class="ss-title">${title}</div><div class="ss-sub">${sub}</div></div></div>
+      <div class="ss-btns">${btns}</div>
     </div>`;
   },
   statusBannerHTML(){
-    const open=this.isSalonOpen();
-    return `<div class="status-banner ${open?"is-open":"is-closed"}"><span class="dot"></span>
-      <div><div class="st-main">${open?this.t("salon_open"):this.t("salon_closed")}</div>
-        <div class="st-sub">${open?this.t("salon_open_manual"):this.t("closed_now")}</div></div></div>`;
+    const st=this.salonState();
+    const main = st==="open"?this.t("salon_open"):st==="busy"?this.t("salon_busy"):this.t("salon_closed");
+    /* client : quand occupé, on affiche dans combien de temps ce sera disponible */
+    const sub  = st==="open"?this.t("salon_open_manual"):st==="busy"?this.busyAvailText():this.t("closed_now");
+    const cls  = st==="open"?"is-open":st==="busy"?"is-pause":"is-closed";
+    return `<div class="status-banner ${cls}"><span class="dot"></span>
+      <div><div class="st-main">${main}</div><div class="st-sub">${sub}</div></div></div>`;
   },
 
   /* ---------- promotions + fidélité : calcul du prix ---------- */
@@ -1653,7 +1746,27 @@ const App = {
       .sort((a,b)=>((a.jour||"")+(a.heure||"")).localeCompare((b.jour||"")+(b.heure||"")));
   },
   pickRdvService(id){ this._rdv=this._rdv||{}; this._rdv.serviceId=id; this.renderRdvClient(); },
-  onRdvDateTime(v){ this._rdv=this._rdv||{}; this._rdv.dt=v||""; },
+  onRdvDateTime(v){ this._rdv=this._rdv||{}; const prev=(this._rdv.dt||"").slice(0,10); this._rdv.dt=v||"";
+    /* si le jour change, on rafraîchit la liste des créneaux déjà réservés (sans le nom du client) */
+    if((v||"").slice(0,10)!==prev) this.renderRdvClient(); },
+  /* créneaux réservés d'un jour, avec heure de début ET heure de fin (début + durée) —
+     utilisé pour informer les autres clients de la période occupée, SANS le nom. */
+  addMinutesToHM(hm, min){
+    const [h,m]=(hm||"0:0").split(":").map(n=>parseInt(n,10)||0);
+    let tot=h*60+m+(min||0); tot=((tot%1440)+1440)%1440;
+    const H=Math.floor(tot/60), M=tot%60;
+    return String(H).padStart(2,"0")+":"+String(M).padStart(2,"0");
+  },
+  rdvTakenList(date){
+    if(!date) return [];
+    const out=[];
+    DB.get("bookings",[]).forEach(b=>{
+      if(b.type==="rdv" && b.jour===date && b.statut!=="annule" && b.heure){
+        out.push({ start:b.heure, end:this.addMinutesToHM(b.heure, b.duree||0) });
+      }
+    });
+    return out.sort((a,b)=>a.start.localeCompare(b.start));
+  },
   /* date+heure actuelle au format attendu par <input type="datetime-local"> (empêche de choisir le passé) */
   nowLocalDT(){ const d=new Date(); d.setSeconds(0,0); const p=n=>String(n).padStart(2,"0");
     return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"T"+p(d.getHours())+":"+p(d.getMinutes()); },
@@ -1666,6 +1779,20 @@ const App = {
         <span class="so-ic">${s.icon}</span><span class="so-nm">${this.svcName(s)}</span>
         <span class="so-pr">${s.prix} ${this.t("dt")}</span></div>`).join("");
     const dtInput=`<input class="input" type="datetime-local" id="rdv-dt" min="${this.nowLocalDT()}" value="${st.dt||""}" onchange="App.onRdvDateTime(this.value)">`;
+    /* créneaux déjà réservés le jour choisi — affichés aux autres clients SANS le nom du client */
+    const selDay=(st.dt||"").slice(0,10);
+    let takenHTML="";
+    if(selDay){
+      const taken=this.rdvTakenList(selDay);
+      const chips = taken.length
+        ? taken.map(t=>`<span class="slot-chip taken">${t.start} → ${t.end} · ${this.t("rdv_slot_reserved")}</span>`).join("")
+        : `<div class="hint" style="margin:0">${this.t("rdv_no_taken")}</div>`;
+      takenHTML=`<div class="taken-slots">
+        <div class="tk-label" style="color:var(--brass-soft);margin-bottom:8px">${this.t("rdv_taken_slots")}</div>
+        <div class="slot-wrap">${chips}</div></div>`;
+    } else {
+      takenHTML=`<div class="taken-slots"><div class="hint" style="margin:0">${this.t("rdv_pick_day_first")}</div></div>`;
+    }
     const mine=this.myRdv(u);
     const mineHTML = mine.length ? mine.map(b=>`<div class="rdv-row">
         <div class="rdv-time">${b.heure||"—"}</div>
@@ -1679,6 +1806,7 @@ const App = {
         <div class="svc-pick">${svcs}</div>
         <div class="tk-label" style="color:var(--brass-soft);margin:16px 0 8px">${this.t("rdv_pick_datetime")}</div>
         <div class="field" style="margin:0">${dtInput}</div>
+        ${takenHTML}
         <button class="btn btn-primary btn-block mt" onclick="App.bookRdv()">📅 ${this.t("rdv_confirm")}</button>
       </div>
       <div class="section-head mt"><h2 style="font-size:1.05rem">${this.t("rdv_my_title")}</h2></div>
@@ -1784,7 +1912,8 @@ const App = {
     return `<div class="card manual-cash" style="margin:10px 0">
       <div class="mc-head">${this.t("agenda_new_rdv")}</div>
       <label class="fld"><span>${this.t("manual_name")}</span>
-        <input class="input" id="ag-nom" type="text" placeholder="${this.t("manual_name_ph")}" value="${this.escape(f.nom||"")}" oninput="App._agendaField('nom',this.value)"></label>
+        <input class="input" id="ag-nom" type="text" list="ag-accounts" autocomplete="off" placeholder="${this.t("client_from_accounts")}" value="${this.escape(f.nom||"")}" oninput="App._agendaField('nom',this.value)">
+        ${this.accountDatalist("ag-accounts")}</label>
       <label class="fld"><span>${this.t("rdv_pick_service")}</span>
         <select class="input" id="ag-svc" onchange="App._agendaField('serviceId',this.value)"><option value="">—</option>${opts}</select></label>
       <label class="fld"><span>${this.t("rdv_pick_time_dt")}</span>
@@ -1876,20 +2005,31 @@ const App = {
     if(!this._manualOpen){
       return `<button class="btn btn-ghost btn-block mt" onclick="App.openManualCash()">${this.t("add_manual")}</button>`;
     }
+    /* prestation : liste déroulante alimentée par la table des services (le montant se remplit auto) */
+    const svcOpts=this.services().map(s=>`<option value="${this.escape(this.svcName(s))}" ${f.svc===this.svcName(s)?"selected":""}>${s.icon} ${this.svcName(s)} — ${s.prix} ${this.t("dt")}</option>`).join("");
     return `<div class="card manual-cash mt">
       <div class="mc-head">${this.t("manual_title")}</div>
       <label class="fld"><span>${this.t("manual_name")}</span>
-        <input class="input" id="mc-nom" type="text" placeholder="${this.t("manual_name_ph")}" value="${this.escape(f.nom||"")}" oninput="App._manualField('nom',this.value)"></label>
+        <input class="input" id="mc-nom" type="text" list="mc-accounts" autocomplete="off" placeholder="${this.t("client_from_accounts")}" value="${this.escape(f.nom||"")}" oninput="App._manualField('nom',this.value)">
+        ${this.accountDatalist("mc-accounts")}</label>
+      <label class="fld"><span>${this.t("manual_service")}</span>
+        <select class="input" id="mc-svc" onchange="App._manualPickService(this.value)"><option value="">—</option>${svcOpts}</select></label>
       <label class="fld"><span>${this.t("manual_amount")}</span>
         <input class="input" id="mc-prix" type="number" inputmode="decimal" min="0" step="1" placeholder="0" value="${this.escape(String(f.prix||""))}" oninput="App._manualField('prix',this.value)"></label>
-      <label class="fld"><span>${this.t("manual_service")}</span>
-        <input class="input" id="mc-svc" type="text" placeholder="${this.t("manual_service_ph")}" value="${this.escape(f.svc||"")}" oninput="App._manualField('svc',this.value)"></label>
       <div class="mc-actions">
         <button class="btn btn-ghost" onclick="App.closeManualCash()">${this.t("cancel_btn")}</button>
         <button class="btn btn-brass" onclick="App.saveManualCash()">${this.t("save")}</button>
       </div></div>`;
   },
   _manualField(k,v){ this._manualForm=this._manualForm||{nom:"",prix:"",svc:""}; this._manualForm[k]=v; },
+  /* choisir une prestation depuis la table : renseigne le nom ET le montant automatiquement */
+  _manualPickService(name){
+    this._manualForm=this._manualForm||{nom:"",prix:"",svc:""};
+    this._manualForm.svc=name||"";
+    const s=this.services().find(x=>this.svcName(x)===name);
+    if(s) this._manualForm.prix=s.prix;   // montant auto (modifiable ensuite)
+    this.renderCash();
+  },
   openManualCash(){ this._manualOpen=true; this._manualForm={nom:"",prix:"",svc:""}; this.renderCash();
     setTimeout(()=>{ const el=document.getElementById("mc-nom"); if(el) el.focus(); },30); },
   closeManualCash(){ this._manualOpen=false; this._manualForm=null; this.renderCash(); },
