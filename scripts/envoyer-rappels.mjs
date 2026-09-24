@@ -13,13 +13,15 @@
      • à l'ADMIN, un récapitulatif :
          - le matin (7 h – 11 h)  → « Aujourd'hui : 5 rendez-vous »
          - le soir  (19 h – 22 h) → « Demain : 3 rendez-vous »
-     • (option ADMIN_INSTANT=1) à l'ADMIN, chaque nouvelle action d'un client
-       (file, rendez-vous, annulation, avis, inscription) avec 15 à 30 min de
-       délai. À utiliser SEULEMENT si les Cloud Functions ne sont pas
-       déployées (sinon l'admin reçoit tout en double).
+     • à l'ADMIN, chaque action d'un client (file, rendez-vous, annulation,
+       avis, inscription) et le bouton « Envoyer une notification de test » :
+         - si les Cloud Functions sont déployées, elles l'ont déjà envoyé en
+           quelques secondes → le robot voit la trace et ne renvoie rien ;
+         - sinon, c'est le robot qui l'envoie (15 à 30 min de délai, ou tout
+           de suite avec Actions → Run workflow).
 
-   Chaque envoi est noté dans la collection « pushLog » : relancer le robot
-   plusieurs fois n'envoie jamais deux fois le même message.
+   Chaque envoi est réservé dans la collection « pushLog » (par le robot OU
+   par la Cloud Function) : jamais deux fois le même message.
 
    Test à blanc (n'envoie rien, affiche seulement) :
      DRY_RUN=1 FIREBASE_SERVICE_ACCOUNT="$(cat cle.json)" node envoyer-rappels.mjs
@@ -35,7 +37,6 @@ import { getMessaging } from "firebase-admin/messaging";
 const SALON         = "Wassim Coiff";
 const TZ            = "Africa/Tunis";                 // heure de la Tunisie
 const DRY_RUN       = process.env.DRY_RUN === "1";
-const ADMIN_INSTANT = process.env.ADMIN_INSTANT === "1";
 const LOG_TTL_JOURS = 30;                             // durée de conservation des traces d'envoi
 
 /* ---------------------------------------------------------------- */
@@ -71,7 +72,7 @@ const MIN_NOW    = L.h * 60 + L.m;
 const hm2min     = (hm) => { const [h, m] = String(hm || "").split(":").map((n) => parseInt(n, 10)); return (h * 60 + m) || 0; };
 
 console.log(`— Rappels ${SALON} — ${AUJOURDHUI} ${String(L.h).padStart(2, "0")}:${String(L.m).padStart(2, "0")} (Tunis)` +
-            `${DRY_RUN ? " — TEST À BLANC" : ""}${ADMIN_INSTANT ? " — alertes admin actives" : ""}`);
+            `${DRY_RUN ? " — TEST À BLANC" : ""}`);
 
 /* ---------------------------------------------------------------- */
 /*  Lecture des rendez-vous d'aujourd'hui et de demain               */
@@ -100,6 +101,29 @@ const TXT = {
   },
 };
 const clip = (v, n) => String(v == null ? "" : v).replace(/\s+/g, " ").trim().slice(0, n);
+/* "2026-09-24" -> "jeudi 24 septembre" */
+const frDate = (jour) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(jour || ""))) return "";
+  try { return new Date(jour + "T12:00:00Z").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }); }
+  catch (e) { return jour; }
+};
+/* Alerte admin à partir d'un document « notifs » (même texte que la Cloud Function) */
+function messageAdmin(n) {
+  const nom = clip(n.nom || "Client", 60), svc = clip(n.service_fr, 60);
+  const quand = n.jour && n.heure ? `\n${frDate(n.jour)} à ${n.heure}` : "";
+  const base = nom + (svc ? " — " + svc : "");
+  switch (n.kind) {
+    case "rdv":    return { title: "📅 Nouveau rendez-vous", body: base + quand };
+    case "file":   return { title: "✂️ Nouveau client dans la file", body: base };
+    case "cancel": return { title: n.heure ? "❌ Rendez-vous annulé" : "❌ Place annulée", body: base + quand };
+    case "avis": {
+      const note = Math.max(1, Math.min(5, parseInt(n.note, 10) || 0));
+      return { title: `⭐ Nouvel avis (${note}/5)`, body: nom + " — " + "★".repeat(note) + "☆".repeat(5 - note) };
+    }
+    case "inscription": return { title: "👤 Nouveau client inscrit", body: nom + (n.tel ? " — " + clip(n.tel, 20) : "") };
+    default: return null;
+  }
+}
 
 /* ---------------------------------------------------------------- */
 /*  Liste des messages à envoyer                                     */
@@ -139,7 +163,8 @@ if (L.h >= 19 && L.h < 22) {
                        texte: () => ({ title: `📋 Demain : ${r.n} rendez-vous`, body: r.detail }) });
 }
 
-/* 3) Option : alertes admin sans Cloud Functions (à partir de la cloche « notifs ») */
+/* 3) Alertes admin : actions des clients (cloche « notifs ») des 3 dernières heures
+      — ignorées si la Cloud Function les a déjà envoyées (trace dans pushLog). */
 const roles = new Map();
 async function roleOf(uid) {
   if (!uid) return null;
@@ -150,24 +175,29 @@ async function roleOf(uid) {
   roles.set(uid, r);
   return r;
 }
-if (ADMIN_INSTANT) {
-  const snapN = await db.collection("notifs").where("ts", ">=", NOW.getTime() - 3 * 3600000).get();
-  for (const d of snapN.docs) {
-    const n = d.data() || {};
-    if ((await roleOf(n._by)) !== "client") continue;
-    const nom = clip(n.nom || "Client", 60), svc = clip(n.service_fr, 60);
-    let title, body = nom + (svc ? " — " + svc : "");
-    switch (n.kind) {
-      case "rdv":         title = "📅 Nouveau rendez-vous"; if (n.jour) body += `\n${n.jour}${n.heure ? " à " + n.heure : ""}`; break;
-      case "file":        title = "✂️ Nouveau client dans la file"; break;
-      case "cancel":      title = n.heure ? "❌ Rendez-vous annulé" : "❌ Place annulée"; break;
-      case "avis":        title = `⭐ Nouvel avis (${Math.max(1, Math.min(5, parseInt(n.note, 10) || 0))}/5)`; body = nom; break;
-      case "inscription": title = "👤 Nouveau client inscrit"; body = nom + (n.tel ? " — " + clip(n.tel, 20) : ""); break;
-      default: continue;
-    }
-    jobs.push({ cle: `notif_${d.id}`, cible: "admin", kind: n.kind, jour: n.jour || "", heure: n.heure || "", ttl: 86400,
-                texte: () => ({ title, body }) });
-  }
+const snapN = await db.collection("notifs").where("ts", ">=", NOW.getTime() - 3 * 3600000).get();
+for (const d of snapN.docs) {
+  const n = d.data() || {};
+  const m = messageAdmin(n);
+  if (!m || (await roleOf(n._by)) !== "client") continue;
+  jobs.push({ cle: `notif_${d.id}`, cible: "admin", kind: n.kind, jour: n.jour || "", heure: n.heure || "", ttl: 86400,
+              texte: () => m });
+}
+
+/* 4) Bouton « Envoyer une notification de test » de l'admin (collection pushTests) */
+const tests = [];
+let dernierTest = null;                       // plusieurs appuis sur « Tester » → une seule notification
+const snapT = await db.collection("pushTests").get();
+for (const d of snapT.docs) {
+  const t = d.data() || {};
+  tests.push(d.ref);
+  if ((t.at || 0) < NOW.getTime() - 86400000 || (await roleOf(t.by)) !== "admin") continue;
+  if (!dernierTest || (t.at || 0) > dernierTest.at) dernierTest = { id: d.id, at: t.at || 0 };
+}
+if (dernierTest) {
+  jobs.push({ cle: `test_${dernierTest.id}`, cible: "admin", kind: "test", jour: "", heure: "", ttl: 3600,
+              texte: () => ({ title: "🔔 Notification de test",
+                              body: "Les alertes Wassim Coiff fonctionnent sur ce téléphone ✅ (envoyée par le robot GitHub)" }) });
 }
 
 /* ---------------------------------------------------------------- */
@@ -248,9 +278,10 @@ for (const job of jobs) {
 }
 
 /* ---------------------------------------------------------------- */
-/*  Ménage des anciennes traces                                      */
+/*  Ménage : demandes de test traitées + anciennes traces            */
 /* ---------------------------------------------------------------- */
 if (!DRY_RUN) {
+  await Promise.all(tests.map((ref) => ref.delete().catch(() => {})));
   const vieux = await db.collection("pushLog").where("expireAt", "<", NOW).limit(200).get();
   await Promise.all(vieux.docs.map((d) => d.ref.delete().catch(() => {})));
 }
