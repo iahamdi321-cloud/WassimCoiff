@@ -1,0 +1,14 @@
+{
+  "name": "wassim-coiff-rappels",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Robot GitHub Actions : rappels de rendez-vous (clients) et récapitulatifs (admin) par notification push FCM.",
+  "scripts": {
+    "rappels": "node envoyer-rappels.mjs",
+    "test": "DRY_RUN=1 node envoyer-rappels.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  }
+}
