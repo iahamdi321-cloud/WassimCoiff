@@ -1,0 +1,43 @@
+# =====================================================================
+#  WASSIM COIFF — Garder les rappels actifs
+#  ---------------------------------------------------------------------
+#  GitHub met en pause les robots planifiés d'un dépôt public après
+#  60 jours sans aucun commit. Ce petit robot écrit la date dans un
+#  fichier le 1er de chaque mois et la commite : les rappels ne
+#  s'arrêtent jamais. Rien à configurer.
+# =====================================================================
+name: Garder les rappels actifs
+
+on:
+  schedule:
+    - cron: "17 3 1 * *"     # le 1er de chaque mois, 04:17 heure de Tunis
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: garder-actif
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Écrire la date et commiter
+        run: |
+          mkdir -p .github
+          date -u +"Dernière activité automatique : %Y-%m-%d %H:%M UTC" > .github/derniere-activite.txt
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/derniere-activite.txt
+          if git diff --staged --quiet; then
+            echo "Rien à commiter."
+            exit 0
+          fi
+          git commit -m "Garder les rappels actifs"
+          git push
