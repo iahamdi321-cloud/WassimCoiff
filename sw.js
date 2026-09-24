@@ -38,7 +38,7 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
-const CACHE = "wassim-coiff-v8";
+const CACHE = "wassim-coiff-v9";
 const SHELL = [
   "./",
   "./index.html",

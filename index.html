@@ -19,17 +19,21 @@
 
 <!-- Firebase (base de données temps réel Firestore) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" crossorigin="anonymous"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" crossorigin="anonymous"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js" crossorigin="anonymous"></script>
 
 <!-- =====================================================================
   LE GRÉNAT — Application salon de coiffure homme (FR / العربية)
   Tout dans un seul fichier (HTML + CSS + JS).
-  Données : localStorage pour l'instant — voir la section "COUCHE DONNEES"
-  dans le bloc de code pour brancher Firebase Firestore plus tard.
-  Hébergement : déposez ce fichier sur un dépôt GitHub puis activez
-  GitHub Pages pour obtenir une URL publique.
-  Admin par défaut :  identifiant = admin   /   mot de passe = admin
+  Données      : Firebase Firestore (temps réel)
+  Connexion    : Firebase Authentication (e-mail + mot de passe,
+                 mot de passe oublié par e-mail)
+  Rôles        : users/{uid}.role = "admin" ou "client"
+                 (le 1er admin se crée dans la console Firebase)
+  Notifications: Firebase Cloud Messaging, envoyées par les Cloud Functions
+                 (dossier functions/, à chaque action d'un client)
+  Hébergement  : GitHub Pages
   ===================================================================== -->
 
 <style>
@@ -436,6 +440,22 @@ a.val:hover{color:var(--brass-soft)}
 .manual-cash .fld span{display:block;font-size:.76rem;color:var(--cream-dim);margin-bottom:6px;letter-spacing:.04em}
 .manual-cash .mc-actions{display:flex;gap:10px;margin-top:4px}
 .manual-cash .mc-actions .btn{flex:1}
+
+/* ===== Authentification Firebase (connexion / mot de passe oublié) ===== */
+.auth-link{display:block;margin:14px auto 0;background:none;border:0;padding:6px 4px;cursor:pointer;
+  color:var(--brass-soft);font-family:var(--body);font-size:.86rem;text-decoration:underline;text-underline-offset:3px}
+.auth-link:hover,.auth-link:focus-visible{color:var(--cream)}
+.auth-link:focus-visible,.btn:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.auth-title{font-family:var(--display);text-transform:uppercase;letter-spacing:.08em;font-size:1rem;color:var(--brass-soft);margin-bottom:6px}
+.auth-sent{border:1px solid rgba(95,164,106,.45);background:rgba(95,164,106,.1);color:var(--cream);
+  border-radius:11px;padding:12px 14px;font-size:.86rem;margin-bottom:14px}
+.field .fhint{display:block;font-size:.72rem;color:var(--muted);margin-top:5px}
+.btn[aria-busy="true"]{opacity:.55;pointer-events:none}
+/* ===== Comptes & rôles ===== */
+.badge-blocked{background:rgba(194,75,75,.18);color:#e7a3a3}
+.badge-legacy{background:rgba(244,237,226,.06);color:var(--muted)}
+.queue-row.is-blocked{opacity:.6}
+.push-status{font-size:.82rem;color:var(--ok);margin:0 0 8px;text-align:center}
 </style>
 </head>
 <body>
@@ -469,24 +489,40 @@ a.val:hover{color:var(--brass-soft)}
         <button data-auth="register" data-i18n="register">Inscription</button>
       </div>
 
-      <!-- Connexion -->
+      <!-- Connexion (Firebase Authentication : e-mail + mot de passe) -->
       <div class="card" id="form-login">
-        <div class="field"><label data-i18n="identifier_label">Téléphone ou identifiant</label>
-          <input class="input" id="log-id" data-i18n-ph="identifier_ph" placeholder="Téléphone" /></div>
-        <div class="field"><label data-i18n="password_label">Mot de passe</label>
-          <input class="input" id="log-pass" type="password" placeholder="••••••" /></div>
-        <button class="btn btn-primary btn-block" onclick="App.login()" data-i18n="btn_login">Se connecter</button>
+        <div class="field"><label for="log-email" data-i18n="email_label">E-mail</label>
+          <input class="input" id="log-email" type="email" inputmode="email" autocomplete="username" data-i18n-ph="email_ph" placeholder="exemple@gmail.com" /></div>
+        <div class="field"><label for="log-pass" data-i18n="password_label">Mot de passe</label>
+          <input class="input" id="log-pass" type="password" autocomplete="current-password" placeholder="••••••" onkeydown="if(event.key==='Enter') App.login()" /></div>
+        <button class="btn btn-primary btn-block" id="btn-login" onclick="App.login()" data-i18n="btn_login">Se connecter</button>
+        <button type="button" class="auth-link" onclick="App.switchAuth('forgot')" data-i18n="forgot_link">Mot de passe oublié ?</button>
+      </div>
+
+      <!-- Mot de passe oublié : envoi d'un e-mail de réinitialisation -->
+      <div class="card" id="form-forgot" style="display:none">
+        <div class="auth-title" data-i18n="forgot_title">Mot de passe oublié</div>
+        <p class="hint" style="margin-bottom:14px" data-i18n="forgot_hint">Entrez l'e-mail de votre compte : vous recevrez un lien pour choisir un nouveau mot de passe.</p>
+        <div class="auth-sent" id="forgot-sent" role="status" style="display:none"></div>
+        <div class="field"><label for="fg-email" data-i18n="email_label">E-mail</label>
+          <input class="input" id="fg-email" type="email" inputmode="email" autocomplete="email" data-i18n-ph="email_ph" placeholder="exemple@gmail.com" onkeydown="if(event.key==='Enter') App.forgotPassword()" /></div>
+        <button class="btn btn-primary btn-block" id="btn-forgot" onclick="App.forgotPassword()" data-i18n="forgot_send">Envoyer le lien</button>
+        <button type="button" class="auth-link" onclick="App.switchAuth('login')" data-i18n="back_login">Retour à la connexion</button>
       </div>
 
       <!-- Inscription -->
       <div class="card" id="form-register" style="display:none">
-        <div class="field"><label data-i18n="name_label">Nom complet</label>
-          <input class="input" id="reg-name" data-i18n-ph="name_ph" placeholder="Ex : Wassim" /></div>
-        <div class="field"><label data-i18n="phone_label">Numéro de téléphone</label>
-          <input class="input" id="reg-phone" type="tel" inputmode="numeric" data-i18n-ph="phone_ph" placeholder="Ex : 22 333 444" /></div>
-        <div class="field"><label data-i18n="password_label">Mot de passe</label>
-          <input class="input" id="reg-pass" type="password" placeholder="••••••" /></div>
-        <button class="btn btn-primary btn-block" onclick="App.register()" data-i18n="btn_register">Créer mon compte</button>
+        <div class="field"><label for="reg-name" data-i18n="name_label">Nom complet</label>
+          <input class="input" id="reg-name" autocomplete="name" data-i18n-ph="name_ph" placeholder="Ex : Wassim" /></div>
+        <div class="field"><label for="reg-phone" data-i18n="phone_label">Numéro de téléphone</label>
+          <input class="input" id="reg-phone" type="tel" inputmode="numeric" autocomplete="tel" data-i18n-ph="phone_ph" placeholder="Ex : 22 333 444" /></div>
+        <div class="field"><label for="reg-email" data-i18n="email_label">E-mail</label>
+          <input class="input" id="reg-email" type="email" inputmode="email" autocomplete="email" data-i18n-ph="email_ph" placeholder="exemple@gmail.com" />
+          <span class="fhint" data-i18n="email_hint">Sert à récupérer votre mot de passe.</span></div>
+        <div class="field"><label for="reg-pass" data-i18n="password_label">Mot de passe</label>
+          <input class="input" id="reg-pass" type="password" autocomplete="new-password" placeholder="••••••" onkeydown="if(event.key==='Enter') App.register()" />
+          <span class="fhint" data-i18n="password_hint">6 caractères minimum.</span></div>
+        <button class="btn btn-primary btn-block" id="btn-register" onclick="App.register()" data-i18n="btn_register">Créer mon compte</button>
       </div>
     </div>
   </section>
@@ -672,15 +708,21 @@ const firebaseConfig = {
    DB.get() lit un cache mémoire (synchrone) ; DB.set() écrit dans Firestore.
    Les écouteurs temps réel (onSnapshot) mettent le cache à jour automatiquement.
    ===================================================================== */
-const COLLECTIONS = ["users","services","bookings","avis","caisses","notifs"];
+/* Ce que chaque rôle écoute en temps réel (les règles Firestore appliquent la même chose côté serveur) */
+const CLIENT_COLLECTIONS = ["services","bookings","avis"];
+const ADMIN_COLLECTIONS  = ["users","services","bookings","avis","caisses","notifs"];
 const CONFIG_KEYS = ["hours","promo","loyalty","settings"];
 const NO_DELETE   = ["bookings","caisses"];   // jamais supprimés (uniquement ajout/màj)
-const LOCAL_KEYS  = ["lang","session"];        // propres à l'appareil
+const LOCAL_KEYS  = ["lang"];                 // propre à l'appareil (la session est gérée par Firebase Auth)
 
 const DB = {
-  db:null, _cache:{},
+  db:null, uid:null, _cache:{}, onError:null,
   clone(v){ return v==null ? v : JSON.parse(JSON.stringify(v)); },
   isLocal(key){ return LOCAL_KEYS.includes(key); },
+  /* chaque écriture est signée : _by = uid de l'auteur (vérifié par les règles), _at = horodatage.
+     La Cloud Function s'en sert pour savoir si c'est un client (=> notification) ou l'admin. */
+  stamp(obj){ return Object.assign(this.clone(obj)||{}, { _by:this.uid||null, _at:Date.now() }); },
+  _write(p){ return p.catch(e=>{ console.warn("Firestore:", e); if(this.onError) this.onError(e); }); },
 
   get(key, def){
     if(this.isLocal(key)){
@@ -701,7 +743,7 @@ const DB = {
 
     // réglages -> un document dans la collection "config"
     if(CONFIG_KEYS.includes(key)){
-      this.db.collection("config").doc(key).set({value:this.clone(val)}).catch(()=>{});
+      this._write(this.db.collection("config").doc(key).set({ value:this.clone(val), _by:this.uid||null, _at:Date.now() }));
       return;
     }
     // collections -> un document par élément (clé = id) ; on n'écrit que ce qui change
@@ -713,11 +755,11 @@ const DB = {
       const id=String(it.id); seen.add(id);
       const prev=oldById[id];
       if(!prev || JSON.stringify(prev)!==JSON.stringify(it)){
-        this.db.collection(key).doc(id).set(this.clone(it)).catch(()=>{});
+        this._write(this.db.collection(key).doc(id).set(this.stamp(it)));
       }
     });
     if(!NO_DELETE.includes(key)){
-      oldArr.forEach(it=>{ if(it&&it.id!=null && !seen.has(String(it.id))) this.db.collection(key).doc(String(it.id)).delete().catch(()=>{}); });
+      oldArr.forEach(it=>{ if(it&&it.id!=null && !seen.has(String(it.id))) this._write(this.db.collection(key).doc(String(it.id)).delete()); });
     }
   },
 
@@ -726,7 +768,7 @@ const DB = {
     if(this.isLocal(key)) return;
     const arr=this._cache[key];
     if(Array.isArray(arr)) this._cache[key]=arr.filter(it=>!(it&&String(it.id)===String(id)));
-    if(this.db) this.db.collection(key).doc(String(id)).delete().catch(()=>{});
+    if(this.db) this._write(this.db.collection(key).doc(String(id)).delete());
   },
 };
 
@@ -739,8 +781,8 @@ const DEFAULT_SERVICES = [
   { id:"retouche", icon:"🔁", prix:30, duree:60, fr:"Retouche créatine",        ar:"تجديد الكيراتين", dfr:"Entretien du lissage",             dar:"صيانة التمليس" },
   { id:"gommage",  icon:"🧴", prix:15, duree:60, fr:"Gommage",                  ar:"تقشير",           dfr:"Gommage du visage",                dar:"تقشير الوجه" },
 ];
-/* Admin par défaut : admin / admin */
-const DEFAULT_ADMIN = { id:"u_admin", role:"admin", username:"admin", password:"admin", nom:"Administrateur", tel:"", createdAt:0 };
+/* (L'ancien compte par défaut admin/admin a été supprimé : les admins sont des comptes
+   Firebase Authentication dont le profil users/{uid} a role = "admin".) */
 
 /* Horaires par défaut : ouvert tous les jours 09:00–19:00, pause 13:00–14:00 (modifiable) */
 /* clés : 0=dimanche … 6=samedi  ·  bfrom/bto = pause (vide = pas de pause) */
@@ -804,7 +846,7 @@ const I18N = {
     svc_desc_fr:"Description (FR)", svc_desc_ar:"Description (AR)", new_service:"Nouvelle prestation", edit_service:"Modifier la prestation",
     confirm_del_user:"Supprimer cet utilisateur ?", confirm_del_svc:"Supprimer cette prestation ?", confirm_del_review:"Supprimer cet avis ?",
     new_password:"Nouveau mot de passe :", no_clients:"Aucun utilisateur",
-    t_registered:"Compte créé, bienvenue !", t_login_ok:"Connexion réussie", t_bad_login:"Identifiant ou mot de passe incorrect.",
+    t_registered:"Compte créé, bienvenue !", t_login_ok:"Connexion réussie", t_bad_login:"E-mail ou mot de passe incorrect.",
     t_fill:"Remplissez tous les champs.", t_id_taken:"Cet identifiant est déjà pris.",
     t_booked:"Place réservée ! Suivez votre tour.", t_already:"Vous avez déjà une réservation en cours.",
     t_validated:"Client validé.", t_started:"Service démarré.", t_finished:"Service terminé et encaissé.",
@@ -920,6 +962,38 @@ const I18N = {
     manual_name:"Nom du client", manual_name_ph:"Ex : passage rapide", manual_amount:"Montant reçu (DT)",
     manual_service:"Prestation (optionnel)", manual_service_ph:"Ex : Coupe",
     t_manual_added:"Encaissement ajouté ✓", manual_need:"Indiquez un nom et un montant valide.",
+    /* --- authentification Firebase --- */
+    email_label:"E-mail", email_ph:"exemple@gmail.com", email_hint:"Sert à récupérer votre mot de passe.",
+    password_hint:"6 caractères minimum.",
+    forgot_link:"Mot de passe oublié ?", forgot_title:"Mot de passe oublié",
+    forgot_hint:"Entrez l'e-mail de votre compte : vous recevrez un lien pour choisir un nouveau mot de passe.",
+    forgot_send:"Envoyer le lien", back_login:"Retour à la connexion",
+    t_reset_sent:(e)=>"Si un compte existe pour "+e+", un e-mail avec un lien de réinitialisation vient d'être envoyé. Pensez à regarder dans les spams.",
+    err_invalid_email:"Adresse e-mail invalide.", err_email_taken:"Un compte existe déjà avec cet e-mail. Connectez-vous ou utilisez « Mot de passe oublié ? ».",
+    err_weak_pass:"Mot de passe trop court : 6 caractères minimum.", err_too_many:"Trop de tentatives. Réessayez dans quelques minutes.",
+    err_network:"Pas de connexion internet.", err_generic:"Une erreur est survenue. Réessayez.",
+    err_provider_off:"La connexion par e-mail n'est pas activée dans Firebase (Authentication → Sign-in method).",
+    err_rules:"Accès refusé par Firestore : vérifiez les règles de sécurité (firestore.rules).",
+    t_blocked:"Ce compte est bloqué. Contactez le salon.", t_denied:"Action refusée : droits insuffisants.",
+    /* --- comptes & rôles (admin) --- */
+    add_admin_hint:"Il pourra changer ce mot de passe avec « Mot de passe oublié ? ».",
+    admin_pass_label:"Mot de passe provisoire", t_admin_created:"Administrateur créé ✓",
+    err_email_taken_admin:"Ce compte existe déjà : utilisez « Rendre admin » dans la liste ci-dessous.",
+    make_admin:"Rendre admin", make_client:"Rendre client", t_role_changed:"Rôle mis à jour ✓",
+    confirm_make_admin:(n)=>"Donner l'accès administrateur à "+n+" ?",
+    confirm_make_client:(n)=>"Retirer l'accès administrateur à "+n+" ?",
+    send_reset:"Envoyer un lien de réinitialisation du mot de passe",
+    confirm_send_reset:(e)=>"Envoyer un lien de réinitialisation du mot de passe à "+e+" ?",
+    t_reset_sent_admin:"Lien de réinitialisation envoyé ✓",
+    block:"Bloquer", unblock:"Débloquer", confirm_block:(n)=>"Bloquer le compte de "+n+" ? Il ne pourra plus utiliser l'application.",
+    t_blocked_ok:"Compte bloqué.", t_unblocked_ok:"Compte débloqué.",
+    badge_blocked:"Bloqué", badge_legacy:"Ancien compte", no_email:"sans e-mail",
+    legacy_hint:"Anciens comptes (connexion par téléphone) : ils ne peuvent plus se connecter. Le client doit créer un nouveau compte avec son e-mail. L'historique des prestations est conservé.",
+    confirm_del_legacy:"Supprimer cet ancien compte ? L'historique des prestations est conservé.",
+    /* --- notifications push --- */
+    notif_test:"Envoyer une notification de test", t_test_sent:"Test envoyé : regardez l'écran du téléphone.",
+    notif_unsupported:"Ce navigateur ne gère pas les notifications. Sur iPhone : ajoutez d'abord l'app à l'écran d'accueil.",
+    notif_new_review:"Nouvel avis", notif_new_user:"Nouveau client inscrit",
   },
   ar:{
     splash_sub:"اختر لغتك / Choisissez votre langue", brand_tag:"حلاقة رجالي",
@@ -958,7 +1032,7 @@ const I18N = {
     svc_desc_fr:"الوصف (FR)", svc_desc_ar:"الوصف (AR)", new_service:"خدمة جديدة", edit_service:"تعديل الخدمة",
     confirm_del_user:"حذف هذا المستخدم؟", confirm_del_svc:"حذف هذه الخدمة؟", confirm_del_review:"حذف هذا التقييم؟",
     new_password:"كلمة السر الجديدة:", no_clients:"لا يوجد مستخدمون",
-    t_registered:"تم إنشاء الحساب، مرحباً!", t_login_ok:"تم الدخول بنجاح", t_bad_login:"المعرّف أو كلمة السر غير صحيحة.",
+    t_registered:"تم إنشاء الحساب، مرحباً!", t_login_ok:"تم الدخول بنجاح", t_bad_login:"البريد الإلكتروني أو كلمة السر غير صحيحة.",
     t_fill:"املأ كل الحقول.", t_id_taken:"هذا المعرّف مستعمل مسبقاً.",
     t_booked:"تم الحجز! تابع دورك.", t_already:"لديك حجز جارٍ بالفعل.",
     t_validated:"تمت الموافقة على الزبون.", t_started:"بدأت الخدمة.", t_finished:"انتهت الخدمة وتم التحصيل.",
@@ -1074,6 +1148,38 @@ const I18N = {
     manual_name:"اسم الزبون", manual_name_ph:"مثال: زبون سريع", manual_amount:"المبلغ المستلَم (د.ت)",
     manual_service:"الخدمة (اختياري)", manual_service_ph:"مثال: قص",
     t_manual_added:"تمت إضافة التحصيل ✓", manual_need:"أدخل اسمًا ومبلغًا صحيحًا.",
+    /* --- تسجيل الدخول (Firebase) --- */
+    email_label:"البريد الإلكتروني", email_ph:"exemple@gmail.com", email_hint:"يُستعمل لاسترجاع كلمة السر.",
+    password_hint:"6 أحرف على الأقل.",
+    forgot_link:"نسيت كلمة السر؟", forgot_title:"نسيت كلمة السر",
+    forgot_hint:"أدخل البريد الإلكتروني لحسابك: ستصلك رسالة فيها رابط لاختيار كلمة سر جديدة.",
+    forgot_send:"إرسال الرابط", back_login:"العودة إلى الدخول",
+    t_reset_sent:(e)=>"إذا كان هناك حساب مرتبط بـ "+e+"، فقد أُرسلت إليه رسالة فيها رابط لإعادة تعيين كلمة السر. تحقّق أيضًا من البريد غير المرغوب فيه.",
+    err_invalid_email:"عنوان البريد الإلكتروني غير صالح.", err_email_taken:"يوجد حساب بهذا البريد الإلكتروني. سجّل الدخول أو استعمل «نسيت كلمة السر؟».",
+    err_weak_pass:"كلمة السر قصيرة جدًا: 6 أحرف على الأقل.", err_too_many:"محاولات كثيرة. أعد المحاولة بعد بضع دقائق.",
+    err_network:"لا يوجد اتصال بالإنترنت.", err_generic:"حدث خطأ. أعد المحاولة.",
+    err_provider_off:"الدخول بالبريد الإلكتروني غير مفعّل في Firebase ‏(Authentication ← Sign-in method).",
+    err_rules:"رفضت Firestore الوصول: تحقّق من قواعد الأمان (firestore.rules).",
+    t_blocked:"هذا الحساب محظور. اتصل بالصالون.", t_denied:"تم رفض العملية: صلاحيات غير كافية.",
+    /* --- الحسابات والأدوار --- */
+    add_admin_hint:"يمكنه تغيير كلمة السر هذه عبر «نسيت كلمة السر؟».",
+    admin_pass_label:"كلمة سر مؤقتة", t_admin_created:"تم إنشاء المسؤول ✓",
+    err_email_taken_admin:"هذا الحساب موجود: استعمل «جعله مسؤولًا» في القائمة أدناه.",
+    make_admin:"جعله مسؤولًا", make_client:"جعله زبونًا", t_role_changed:"تم تحديث الدور ✓",
+    confirm_make_admin:(n)=>"منح صلاحيات المسؤول لـ "+n+"؟",
+    confirm_make_client:(n)=>"سحب صلاحيات المسؤول من "+n+"؟",
+    send_reset:"إرسال رابط لإعادة تعيين كلمة السر",
+    confirm_send_reset:(e)=>"إرسال رابط إعادة تعيين كلمة السر إلى "+e+"؟",
+    t_reset_sent_admin:"تم إرسال رابط إعادة التعيين ✓",
+    block:"حظر", unblock:"إلغاء الحظر", confirm_block:(n)=>"حظر حساب "+n+"؟ لن يتمكن من استعمال التطبيق.",
+    t_blocked_ok:"تم حظر الحساب.", t_unblocked_ok:"تم إلغاء حظر الحساب.",
+    badge_blocked:"محظور", badge_legacy:"حساب قديم", no_email:"بدون بريد",
+    legacy_hint:"حسابات قديمة (الدخول بالهاتف): لم يعد بإمكانها الدخول. على الزبون إنشاء حساب جديد ببريده الإلكتروني. يبقى سجل الخدمات محفوظًا.",
+    confirm_del_legacy:"حذف هذا الحساب القديم؟ يبقى سجل الخدمات محفوظًا.",
+    /* --- الإشعارات --- */
+    notif_test:"إرسال إشعار تجريبي", t_test_sent:"تم إرسال التجربة: انظر إلى شاشة الهاتف.",
+    notif_unsupported:"هذا المتصفح لا يدعم الإشعارات. على iPhone: أضف التطبيق أولًا إلى الشاشة الرئيسية.",
+    notif_new_review:"تقييم جديد", notif_new_user:"زبون جديد مسجّل",
   },
 };
 
@@ -1081,83 +1187,160 @@ const I18N = {
    APPLICATION
    ===================================================================== */
 const App = {
-  lang:"fr", session:null, reviewStars:0, authMode:"login", ticker:null,
+  lang:"fr", session:null, profile:null, fbUser:null, auth:null,
+  reviewStars:0, authMode:"login", ticker:null,
   svcFormOpen:false, svcEditId:null, deferredPrompt:null, _promoDaysSel:null,
+  _dataUnsubs:[], _profileUnsub:null, _dataRole:null, _dataReady:false, _authResolved:false,
 
   init(){
     this.lang = DB.get("lang", null);          // local à l'appareil
+    try{ localStorage.removeItem("lg_session"); }catch(e){}   // ancienne session admin/admin : plus utilisée
     this.buildLangToggles();
     this.showBoot(true);
 
-    // Connexion à Firebase
+    // Connexion à Firebase (Firestore + Authentication)
     try{
       if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
       DB.db = firebase.firestore();
       DB.db.enablePersistence({synchronizeTabs:true}).catch(()=>{});  // cache hors-ligne (best-effort)
+      this.auth = firebase.auth();
     }catch(e){ console.warn("Firebase init:", e); }
+    DB.onError = (e)=>{ if(e && e.code==="permission-denied") this.toast(this.t("t_denied")); };
 
-    this.connect();
-    // filet de sécurité : si Firestore ne répond pas (ex. hors-ligne au 1er lancement)
-    this._bootTimeout = setTimeout(()=>{ if(!this._initialDone) this._afterInitial(); }, 6000);
-
+    if(this.auth){
+      // Firebase garde la session sur l'appareil : l'utilisateur reste connecté entre deux visites
+      this.auth.onAuthStateChanged(user=>this.onAuth(user));
+    } else {
+      this._authResolved=true; this.showBoot(false); this.route();
+    }
     this.ticker = setInterval(()=>this.tick(), 1000);
   },
 
-  /* écoute en temps réel toutes les collections + les réglages */
-  connect(){
-    if(!DB.db){ this._afterInitial(); return; }
-    this._pending = new Set([...COLLECTIONS, "config"]);
-    COLLECTIONS.forEach(name=>{
-      DB.db.collection(name).onSnapshot(
+  /* ---------- session Firebase ---------- */
+  onAuth(user){
+    this._authResolved = true;
+    if(this._profileUnsub){ try{ this._profileUnsub(); }catch(e){} this._profileUnsub=null; }
+    if(!user){
+      this.fbUser=null; this.profile=null; this.session=null; DB.uid=null;
+      this.stopData();
+      this.showBoot(false);
+      this.route();
+      return;
+    }
+    this.fbUser=user; this.session={userId:user.uid}; DB.uid=user.uid;
+    this.showBoot(true);
+    // le profil users/{uid} porte le rôle (admin / client) : on l'écoute en direct
+    this._profileUnsub = DB.db.collection("users").doc(user.uid).onSnapshot(
+      snap=>this.onProfile(snap),
+      err=>{ console.warn("profil:", err); this.toast(this.t("err_rules")); if(this.auth) this.auth.signOut(); }
+    );
+  },
+  onProfile(snap){
+    const user=this.fbUser; if(!user) return;
+    if(!snap.exists){
+      if(this._registering) return;           // profil en cours de création (inscription)
+      this.createProfileFromAuth(user);        // compte Firebase sans profil : on crée un profil client
+      return;
+    }
+    const p = Object.assign({}, snap.data(), { id:user.uid });
+    if(p.disabled){ this.toast(this.t("t_blocked")); this.logout(); return; }
+    this.profile = p;
+    const role = p.role==="admin" ? "admin" : "client";
+    if(role!==this._dataRole) this.startData(role);      // 1re connexion ou rôle modifié par un admin
+    else if(this._dataReady && this.lang) this.applyLang();
+  },
+  createProfileFromAuth(user){
+    const nom=(user.displayName || (user.email||"").split("@")[0] || "Client").trim();
+    DB.db.collection("users").doc(user.uid).set({
+      id:user.uid, role:"client", nom, tel:"", email:user.email||"", lang:this.lang||"fr",
+      createdAt:Date.now(), _by:user.uid, _at:Date.now()
+    }).catch(e=>{ console.warn("profil:", e); this.toast(this.t("err_rules")); if(this.auth) this.auth.signOut(); });
+  },
+
+  /* écoute en temps réel UNIQUEMENT ce que le rôle a le droit de lire */
+  stopData(){
+    this._dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
+    this._dataUnsubs=[]; this._dataRole=null; this._dataReady=false; DB._cache={};
+    clearTimeout(this._bootTimeout);
+  },
+  startData(role){
+    this.stopData();
+    this._dataRole=role;
+    const cols = role==="admin" ? ADMIN_COLLECTIONS : CLIENT_COLLECTIONS;
+    this._pending = new Set([...cols, "config"]);
+    cols.forEach(name=>{
+      this._dataUnsubs.push(DB.db.collection(name).onSnapshot(
         snap=>{ const arr=[]; snap.forEach(d=>arr.push(d.data())); DB._cache[name]=arr; this._markReady(name); },
         err=>{ console.warn("snapshot "+name, err); this._markReady(name); }
-      );
+      ));
     });
-    DB.db.collection("config").onSnapshot(
+    this._dataUnsubs.push(DB.db.collection("config").onSnapshot(
       snap=>{ snap.forEach(d=>{ const v=d.data(); DB._cache[d.id]=v?v.value:undefined; }); this._markReady("config"); },
       err=>{ console.warn("snapshot config", err); this._markReady("config"); }
-    );
+    ));
+    // filet de sécurité : si Firestore ne répond pas (ex. hors-ligne au 1er lancement)
+    this._bootTimeout = setTimeout(()=>{ if(!this._dataReady) this._afterData(); }, 6000);
   },
   _markReady(name){
     if(this._pending){ this._pending.delete(name);
-      if(this._pending.size===0 && !this._initialDone) this._afterInitial();
+      if(this._pending.size===0 && !this._dataReady) this._afterData();
     }
     this.onData();
   },
-  _afterInitial(){
-    if(this._initialDone) return;
-    this._initialDone=true;
+  _afterData(){
+    if(this._dataReady) return;
+    this._dataReady=true;
     clearTimeout(this._bootTimeout);
-    this.ensureSeed();
-    this.recomputeCaisses();
-    this.session = DB.get("session", null);
-    this.showBoot(false);
-    if(!this.lang){ this.show("screen-lang"); }
-    else { this.applyLang(); this.route(); }
+    if(this.isAdmin()){
+      this.ensureSeed();
+      this.recomputeCaisses();
+      this.migrateLegacyUsers();
+      this.pruneNotifs();
+      this.requestAlerts(true);     // ré-enregistre ce téléphone si les alertes sont déjà autorisées
+    }
+    if(this.lang) this.applyLang();
+    this.route();
   },
   /* re-rendu réactif quand des données changent sur un autre appareil */
   onData(){
-    if(!this._initialDone) return;
+    if(!this._dataReady) return;
     clearTimeout(this._rerender);
-    this._rerender=setTimeout(()=>{ if(this.session) this.renderAll(); }, 90);
+    this._rerender=setTimeout(()=>{ if(this.profile) this.renderAll(); }, 90);
   },
   showBoot(on){ const b=document.getElementById("boot"); if(b) b.classList.toggle("show", !!on); },
 
-  /* données de départ */
+  /* données de départ (uniquement par un admin : les clients n'ont pas le droit d'écrire ici) */
   ensureSeed(){
     if(!DB.get("services",[]).length) DB.set("services", DEFAULT_SERVICES);
     if(DB.get("hours", null)===null) DB.set("hours", DEFAULT_HOURS);
     if(DB.get("promo", null)===null) DB.set("promo", DEFAULT_PROMO);
     if(DB.get("loyalty", null)===null) DB.set("loyalty", DEFAULT_LOYALTY);
     if(DB.get("settings", null)===null) DB.set("settings", DEFAULT_SETTINGS);
-    let users = DB.get("users", []);
-    if(!users.some(u=>u.role==="admin")){ users.unshift({...DEFAULT_ADMIN}); DB.set("users", users); }
+  },
+  /* anciens comptes (identifiant/mot de passe en clair dans Firestore) :
+     on efface les mots de passe et on les marque "ancien compte" ; admin/admin est supprimé. */
+  migrateLegacyUsers(){
+    const FV=firebase.firestore.FieldValue;
+    DB.get("users",[]).forEach(u=>{
+      if(!u || !u.id) return;
+      if(u.id==="u_admin" && u.username==="admin"){ DB.del("users","u_admin"); return; }
+      if(u.password!==undefined){
+        DB._write(DB.db.collection("users").doc(String(u.id)).update({ password:FV.delete(), legacy:true, _by:DB.uid, _at:Date.now() }));
+      }
+    });
   },
 
+  /* aiguillage : langue → connexion → espace admin ou espace client selon le rôle */
   route(){
-    const u = this.currentUser();
-    if(!u){ this.show("screen-auth"); this.switchAuth("login"); return; }
-    if(u.role==="admin") this.openAdmin(); else this.openClient();
+    if(!this.lang){ this.showBoot(false); this.show("screen-lang"); return; }
+    if(!this._authResolved){ this.showBoot(true); return; }
+    if(!this.fbUser){
+      this.showBoot(false); this.show("screen-auth");
+      this.switchAuth(this.authMode||"login"); return;
+    }
+    if(!this.profile || !this._dataReady){ this.showBoot(true); return; }
+    this.showBoot(false);
+    if(this.profile.role==="admin") this.openAdmin(); else this.openClient();
   },
 
   /* ---------- langue ---------- */
@@ -1181,7 +1364,7 @@ const App = {
     this.syncLangToggles();
   },
   syncLangToggles(){ document.querySelectorAll(".lang-toggle button").forEach(b=>b.classList.toggle("on", b.dataset.l===this.lang)); },
-  t(key){ const v=I18N[this.lang][key]; return v!==undefined?v:(I18N.fr[key]!==undefined?I18N.fr[key]:key); },
+  t(key){ const d=I18N[this.lang]||I18N.fr; const v=d[key]; return v!==undefined?v:(I18N.fr[key]!==undefined?I18N.fr[key]:key); },
 
   /* ---------- écrans ---------- */
   show(id){ document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("active", s.id===id)); },
@@ -1194,51 +1377,146 @@ const App = {
     this.renderAll();
   },
 
-  /* ---------- auth ---------- */
+  /* ---------- authentification (Firebase Authentication) ---------- */
   switchAuth(mode){
     this.authMode=mode;
-    document.querySelectorAll("#auth-tabs button").forEach(b=>b.classList.toggle("on", b.dataset.auth===mode));
-    document.getElementById("form-login").style.display = mode==="login"?"":"none";
+    const tab = mode==="forgot" ? "login" : mode;
+    document.querySelectorAll("#auth-tabs button").forEach(b=>b.classList.toggle("on", b.dataset.auth===tab));
+    document.getElementById("form-login").style.display    = mode==="login"?"":"none";
     document.getElementById("form-register").style.display = mode==="register"?"":"none";
+    document.getElementById("form-forgot").style.display   = mode==="forgot"?"":"none";
+    if(mode==="forgot"){
+      const le=document.getElementById("log-email"), fe=document.getElementById("fg-email");
+      if(fe && le && !fe.value) fe.value=le.value.trim();
+      const sent=document.getElementById("forgot-sent"); if(sent) sent.style.display="none";
+      setTimeout(()=>{ if(fe) fe.focus(); },30);
+    }
   },
   normPhone(s){ return (s||"").replace(/\s+/g,"").trim(); },
+  normEmail(s){ return (s||"").trim().toLowerCase(); },
+  /* traduit les codes d'erreur Firebase en messages clairs */
+  authError(e){
+    const c=(e&&e.code)||"";
+    if(["auth/invalid-credential","auth/wrong-password","auth/user-not-found","auth/invalid-login-credentials"].includes(c)) return this.t("t_bad_login");
+    if(c==="auth/invalid-email" || c==="auth/missing-email") return this.t("err_invalid_email");
+    if(c==="auth/email-already-in-use") return this.t("err_email_taken");
+    if(c==="auth/weak-password" || c==="auth/missing-password") return this.t("err_weak_pass");
+    if(c==="auth/too-many-requests") return this.t("err_too_many");
+    if(c==="auth/network-request-failed" || c==="unavailable") return this.t("err_network");
+    if(c==="auth/user-disabled") return this.t("t_blocked");
+    if(c==="auth/operation-not-allowed") return this.t("err_provider_off");
+    if(c==="permission-denied") return this.t("err_rules");
+    return this.t("err_generic")+(c?" ("+c+")":"");
+  },
+  /* bloque le bouton pendant l'appel réseau (évite les doubles clics) */
+  async busy(btnId, fn){
+    const b=document.getElementById(btnId);
+    if(b && b.getAttribute("aria-busy")==="true") return;
+    if(b) b.setAttribute("aria-busy","true");
+    try{ await fn(); } finally { if(b) b.removeAttribute("aria-busy"); }
+  },
 
   login(){
-    const id=this.normPhone(document.getElementById("log-id").value);
-    const pass=document.getElementById("log-pass").value;
-    if(!id||!pass) return this.toast(this.t("t_fill"));
-    const u=DB.get("users",[]).find(x=>x.username===id && x.password===pass);
-    if(!u) return this.toast(this.t("t_bad_login"));
-    this.session={userId:u.id}; DB.set("session",this.session);
-    this.toast(this.t("t_login_ok")); this.applyLang(); this.route();
+    return this.busy("btn-login", async ()=>{
+      const email=this.normEmail(document.getElementById("log-email").value);
+      const pass=document.getElementById("log-pass").value;
+      if(!email||!pass) return this.toast(this.t("t_fill"));
+      if(!this.auth) return this.toast(this.t("err_network"));
+      try{
+        await this.auth.signInWithEmailAndPassword(email, pass);
+        document.getElementById("log-pass").value="";
+        this.toast(this.t("t_login_ok"));
+      }catch(e){ this.toast(this.authError(e)); }
+    });
   },
-  register(){
-    const nom=document.getElementById("reg-name").value.trim();
-    const tel=this.normPhone(document.getElementById("reg-phone").value);
-    const pass=document.getElementById("reg-pass").value;
-    if(!nom||!tel||!pass) return this.toast(this.t("t_fill"));
-    const users=DB.get("users",[]);
-    if(users.some(u=>u.username===tel)) return this.toast(this.t("t_id_taken"));
-    const u={id:"u"+Date.now(), role:"client", username:tel, password:pass, nom, tel, lang:this.lang, createdAt:Date.now()};
-    users.push(u); DB.set("users",users);
-    this.session={userId:u.id}; DB.set("session",this.session);
-    this.toast(this.t("t_registered")); this.applyLang(); this.openClient();
-  },
-  logout(){ this.session=null; DB.set("session",null); document.getElementById("log-pass").value=""; this.show("screen-auth"); this.switchAuth("login"); },
 
-  currentUser(){ if(!this.session) return null; return DB.get("users",[]).find(u=>u.id===this.session.userId)||null; },
-  isAdmin(){ const u=this.currentUser(); return u && u.role==="admin"; },
+  register(){
+    return this.busy("btn-register", async ()=>{
+      const nom=document.getElementById("reg-name").value.trim();
+      const tel=this.normPhone(document.getElementById("reg-phone").value);
+      const email=this.normEmail(document.getElementById("reg-email").value);
+      const pass=document.getElementById("reg-pass").value;
+      if(!nom||!tel||!email||!pass) return this.toast(this.t("t_fill"));
+      if(pass.length<6) return this.toast(this.t("err_weak_pass"));
+      if(!this.auth) return this.toast(this.t("err_network"));
+      this._registering=true;
+      try{
+        const cred=await this.auth.createUserWithEmailAndPassword(email, pass);
+        const uid=cred.user.uid; DB.uid=uid;
+        cred.user.updateProfile({displayName:nom}).catch(()=>{});
+        // profil + rôle : un nouvel inscrit est TOUJOURS "client" (imposé par les règles Firestore)
+        await DB.db.collection("users").doc(uid).set({
+          id:uid, role:"client", nom, tel, email, lang:this.lang||"fr", createdAt:Date.now(), _by:uid, _at:Date.now()
+        });
+        this._registering=false;
+        this.pushNotif("inscription", { clientNom:nom, tel });
+        document.getElementById("reg-pass").value="";
+        this.toast(this.t("t_registered"));
+      }catch(e){
+        this._registering=false;
+        this.toast(this.authError(e));
+        if(this.auth.currentUser && !this.profile) this.createProfileFromAuth(this.auth.currentUser);
+      }
+    });
+  },
+
+  /* mot de passe oublié : Firebase envoie un e-mail avec un lien pour choisir un nouveau mot de passe */
+  forgotPassword(){
+    return this.busy("btn-forgot", async ()=>{
+      const email=this.normEmail(document.getElementById("fg-email").value);
+      if(!email) return this.toast(this.t("t_fill"));
+      if(!this.auth) return this.toast(this.t("err_network"));
+      const done=()=>{ const el=document.getElementById("forgot-sent");
+        if(el){ el.textContent=this.t("t_reset_sent")(email); el.style.display=""; } };
+      try{ await this.sendReset(email); done(); }
+      catch(e){
+        // même message si l'e-mail est inconnu : on ne révèle pas quels e-mails ont un compte
+        if(e && e.code==="auth/user-not-found") done();
+        else this.toast(this.authError(e));
+      }
+    });
+  },
+  async sendReset(email){
+    this.auth.languageCode = this.lang==="ar" ? "ar" : "fr";     // langue de l'e-mail envoyé
+    const url=this.resetContinueUrl();
+    try{
+      // après le changement de mot de passe, le bouton "Continuer" ramène à l'application
+      await this.auth.sendPasswordResetEmail(email, url ? { url } : undefined);
+    }catch(e){
+      // domaine pas encore autorisé dans Firebase : on envoie quand même, sans lien de retour
+      if(e && /continue-uri|unauthorized-domain/.test(e.code||"")) await this.auth.sendPasswordResetEmail(email);
+      else throw e;
+    }
+  },
+  resetContinueUrl(){
+    try{ const u=location.href.split("#")[0].split("?")[0]; return /^https:\/\//.test(u) ? u : ""; }catch(e){ return ""; }
+  },
+
+  async logout(){
+    if(this._loggingOut) return; this._loggingOut=true;
+    this.showBoot(true);
+    try{ if(this.isAdmin()) await this.removePushToken(); }catch(e){}   // ce téléphone ne reçoit plus les alertes admin
+    if(this._profileUnsub){ try{ this._profileUnsub(); }catch(e){} this._profileUnsub=null; }
+    this.stopData();
+    try{ if(this.auth) await this.auth.signOut(); }catch(e){}
+    // vide le cache local Firestore (les données admin ne restent pas sur l'appareil)
+    try{ if(DB.db){ await DB.db.terminate(); await DB.db.clearPersistence(); } }catch(e){}
+    location.reload();
+  },
+
+  currentUser(){ return this.profile; },
+  isAdmin(){ const u=this.profile; return !!(u && u.role==="admin"); },
 
   openClient(){
     const u=this.currentUser(); const hi=this.lang==="ar"?"مرحبا، ":"Bonjour, ";
-    document.getElementById("client-hello").textContent=hi+(u?u.nom.split(" ")[0]:"");
+    document.getElementById("client-hello").textContent=hi+(u&&u.nom?u.nom.split(" ")[0]:"");
     this.show("app-client"); this.showTab("tab-myturn","client-nav");
   },
   openAdmin(){
     const u=this.currentUser();
     this._notifSince=Date.now();
     this._alerted=new Set();
-    document.getElementById("admin-hello").textContent=(this.lang==="ar"?"المسؤول · ":"Gérant · ")+(u?u.nom:"");
+    document.getElementById("admin-hello").textContent=(this.lang==="ar"?"المسؤول · ":"Gérant · ")+(u?u.nom||"":"");
     this.show("app-admin"); this.showTab("tab-queue","admin-nav");
   },
 
@@ -1256,7 +1534,10 @@ const App = {
   svc(id){ return this.services().find(s=>s.id===id); },
   svcName(s){ return this.lang==="ar"?s.ar:s.fr; },
   svcDesc(s){ return this.lang==="ar"?s.dar:s.dfr; },
-  bName(b){ return this.lang==="ar"?(b.nom_ar||""):(b.nom_fr||""); },
+  /* les réservations sont écrites par les clients : tout texte qui en vient est échappé avant affichage */
+  bNameRaw(b){ return this.lang==="ar"?(b.nom_ar||""):(b.nom_fr||""); },
+  bName(b){ return this.escape(this.bNameRaw(b)); },
+  bIcon(b){ return this.escape((b&&b.icon)||""); },
 
   fmtDur(min){ const h=Math.floor(min/60), m=min%60;
     if(h===0) return m+" "+this.t("u_min"); if(m===0) return h+this.t("u_h"); return h+this.t("u_h")+(m<10?"0":"")+m; },
@@ -1310,8 +1591,7 @@ const App = {
       statut:"attente", jour:this.today(), createdAt:Date.now(), startAt:null, endAt:null };
     bookings.push(b);
     DB.set("bookings",bookings);
-    this.pushNotif("file", b);          // notification interne (cloche)
-    this.notifyAdmin(b);                 // notification téléphone (Vercel)
+    this.pushNotif("file", b);          // cloche de l'admin (le push téléphone part de la Cloud Function)
     this.toast(pr.gratuit?this.t("t_booked_free"):(pr.remisePct?this.t("t_booked_promo")(pr.remisePct):this.t("t_booked")));
     this.showTab("tab-myturn","client-nav");
   },
@@ -1415,7 +1695,7 @@ const App = {
   tip(b){ const t=this.montant(b)-(b.prix||0); return t>0? t : 0; },
   phoneDigits(p){ const r=(p||"").replace(/\D/g,""); return r.startsWith("216")? r : ("216"+r); },
   phoneLocal(p){ const r=(p||"").replace(/\D/g,""); return r.startsWith("216")? r.slice(3) : r; },
-  phoneFmt(p){ const l=this.phoneLocal(p); return l.length===8 ? l.replace(/(\d{2})(\d{3})(\d{3})/,"$1 $2 $3") : (p||""); },
+  phoneFmt(p){ const l=this.phoneLocal(p); return l.length===8 ? l.replace(/(\d{2})(\d{3})(\d{3})/,"$1 $2 $3") : this.escape(p||""); },
 
   /* ---------- page À propos (client + admin) ---------- */
   renderAbout(target){
@@ -1465,8 +1745,8 @@ const App = {
       <div style="font-size:20px;font-weight:800;letter-spacing:.12em">WASSIM COIFF</div>
       <div style="font-size:11px;letter-spacing:.2em;color:#7B1E3A;text-transform:uppercase">Le Grénat · ${this.t("ticket_label")}</div>
       <hr style="border:none;border-top:1px dashed #999;margin:14px 0"/>
-      <div style="font-size:26px;font-weight:700">${b.icon} ${this.bName(b)}</div>
-      <div style="margin:6px 0;font-size:14px">${u?u.nom:""}${u&&u.tel?" · "+u.tel:""}</div>
+      <div style="font-size:26px;font-weight:700">${this.bIcon(b)} ${this.bName(b)}</div>
+      <div style="margin:6px 0;font-size:14px">${u?this.escape(u.nom):""}${u&&u.tel?" · "+this.escape(u.tel):""}</div>
       <div style="font-size:14px">${b.gratuit?this.t("price_free"):this.fmtMoney(b.prix)} · ⏱ ${this.fmtDur(b.duree)}</div>
       ${qr?`<img src="${qr}" style="width:180px;height:180px;margin-top:14px"/>`:""}
       <div style="font-size:12px;color:#555;margin-top:8px">${this.t("follow_qr")}</div>
@@ -1477,7 +1757,7 @@ const App = {
   async shareTicket(id){
     const b=DB.get("bookings",[]).find(x=>x.id===id); if(!b) return;
     const link=this.appUrl()+"#t="+b.id;
-    const txt=`${this.t("ticket_label")} — ${this.bName(b)} · Wassim Coiff`;
+    const txt=`${this.t("ticket_label")} — ${this.bNameRaw(b)} · Wassim Coiff`;
     if(navigator.share){ try{ await navigator.share({title:"Wassim Coiff", text:txt, url:link}); this.toast(this.t("t_share_done")); }catch(e){} }
     else { this.copyText(link); }
   },
@@ -1566,7 +1846,7 @@ const App = {
       : (b.remisePct ? `<span class="was" style="display:inline-block">${b.prixBase} ${this.t("dt")}</span> <b>${this.fmtMoney(b.prix)}</b> <span class="tag-promo">−${b.remisePct}%</span>` : `<b>${this.fmtMoney(b.prix)}</b>`);
     w.innerHTML=this.statusBannerHTML()
       +`<div class="ticket"><div class="tk-top">
-        <div><div class="tk-label">${this.t("ticket_label")}</div><div class="tk-svc">${b.icon} ${this.bName(b)}</div>
+        <div><div class="tk-label">${this.t("ticket_label")}</div><div class="tk-svc">${this.bIcon(b)} ${this.bName(b)}</div>
           <div style="margin-top:6px;font-size:.9rem">${priceLine} · ⏱ ${this.fmtDur(b.duree)}</div></div>
         <span class="tk-status st-${b.statut}">${this.t("status_"+b.statut)}</span></div>
       <div class="perf"></div>${body}
@@ -1589,7 +1869,7 @@ const App = {
     const hasCur=q.some(x=>x.statut==="encours");
     w.innerHTML=sw+q.map((b,i)=>{
       const cur=b.statut==="encours";
-      let sub=`${b.icon} ${this.bName(b)} · ${this.fmtMoney(b.prix)} · ⏱ ${this.fmtDur(b.duree)}`;
+      let sub=`${this.bIcon(b)} ${this.bName(b)} · ${this.fmtMoney(b.prix)} · ⏱ ${this.fmtDur(b.duree)}`;
       if(cur){ const r=Math.max(0,(b.endAt||0)-Date.now()); sub+=` · <strong style="color:var(--garnet-soft)">${this.t("ends_in")} ${this.fmtClock(r)}</strong>`; }
       let a="";
       if(b.statut==="attente") a+=`<button class="btn btn-ok btn-sm" onclick="App.validate('${b.id}')">${this.t("validate")}</button>`;
@@ -1598,7 +1878,7 @@ const App = {
       a+=`<button class="btn btn-ghost btn-sm" onclick="App.editTime('${b.id}')">⏱ ${this.t("edit_time")}</button>`;
       if(!cur) a+=`<button class="btn btn-danger btn-sm" onclick="App.adminCancel('${b.id}')">✕</button>`;
       return `<div class="queue-row ${cur?"is-encours":""}"><div class="pos">${cur?"✂️":i+1}</div>
-        <div><div class="who">${b.clientNom}</div><div class="sub">${sub}</div></div>
+        <div><div class="who">${this.escape(b.clientNom)}</div><div class="sub">${sub}</div></div>
         <div class="acts">${a}</div></div>`;
     }).join("");
   },
@@ -1614,23 +1894,19 @@ const App = {
   _setStatut(id,st){ const bs=DB.get("bookings",[]); const b=bs.find(x=>x.id===id); if(b){ b.statut=st; DB.set("bookings",bs); } },
 
   /* =================== NOTIFICATIONS (cloche interne + push téléphone) =================== */
-  NOTIFY_URL:"/api/notify",
-  /* push vers le téléphone du gérant via la fonction serverless Vercel (Firebase Cloud Messaging) */
-  notifyAdmin(b){
-    try{
-      fetch(this.NOTIFY_URL,{ method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ nom:b.clientNom||"", service:b.nom_fr||"", type:b.type||"file", jour:b.jour||"", heure:b.heure||"" })
-      }).catch(()=>{});
-    }catch(e){}
-  },
-  /* crée une notification interne (visible sur la cloche de l'admin, synchronisée Firestore) */
+  /* Push sur le téléphone de l'admin (Firebase Cloud Messaging) :
+     l'app n'envoie rien elle-même. Les Cloud Functions (dossier functions/) surveillent
+     Firestore et envoient la notification à chaque ajout / modification d'un client
+     (réservation, rendez-vous, annulation, avis, inscription). */
+  /* notification interne (cloche de l'admin) : un client peut seulement en CRÉER, seul l'admin les lit */
   pushNotif(kind, b){
+    if(!DB.db) return;
     const n={ id:"n"+Date.now()+Math.floor(Math.random()*1000), kind,
-      nom:b.clientNom||"", service_fr:b.nom_fr||"", service_ar:b.nom_ar||"",
-      jour:b.jour||"", heure:b.heure||"", ts:Date.now(), lu:false };
-    const arr=DB.get("notifs",[]); arr.push(n);
-    DB.set("notifs", arr.slice(-60));   // on ne garde que les 60 dernières
+      nom:String(b.clientNom||"").slice(0,80), service_fr:b.nom_fr||"", service_ar:b.nom_ar||"",
+      jour:b.jour||"", heure:b.heure||"", note:b.note||0, tel:b.tel||"", ts:Date.now(), lu:false };
+    DB._write(DB.db.collection("notifs").doc(n.id).set(DB.stamp(n)));
   },
+  pruneNotifs(){ this.notifsList().slice(60).forEach(n=>DB.del("notifs", n.id)); },   // on garde les 60 dernières
   notifsList(){ return DB.get("notifs",[]).slice().sort((a,b)=>(b.ts||0)-(a.ts||0)); },
   unreadCount(){ return this.notifsList().filter(n=>!n.lu).length; },
   notifSvcName(n){ return this.lang==="ar" ? (n.service_ar||n.service_fr||"") : (n.service_fr||""); },
@@ -1638,23 +1914,32 @@ const App = {
     const badge=document.getElementById("bell-badge");
     if(badge){ const c=this.unreadCount();
       if(c>0){ badge.textContent=c>99?"99+":c; badge.style.display="grid"; } else badge.style.display="none"; }
-    this.maybeAlert();
   },
+  NOTIF_KINDS:{ file:["🪑","notif_new_file"], rdv:["📅","notif_new_rdv"], cancel:["✖️","notif_cancel_file"],
+                avis:["⭐","notif_new_review"], inscription:["👤","notif_new_user"] },
   renderNotifsPanel(){
     const w=document.getElementById("notif-list"); if(!w) return;
-    const enableBtn=`<button class="btn btn-brass btn-block" style="margin-bottom:10px" onclick="App.requestAlerts()">${this.t("notif_enable")}</button>`;
+    const pushOn = !!this._pushToken && ("Notification" in window) && Notification.permission==="granted";
+    const top = pushOn
+      ? `<div class="push-status">${this.t("notif_enabled")}</div>
+         <button class="btn btn-ghost btn-block" style="margin-bottom:10px" id="btn-test-push" onclick="App.testPush()">🔔 ${this.t("notif_test")}</button>`
+      : `<button class="btn btn-brass btn-block" style="margin-bottom:10px" onclick="App.requestAlerts()">${this.t("notif_enable")}</button>`;
     const list=this.notifsList();
-    if(list.length===0){ w.innerHTML=enableBtn+`<div class="card empty"><div class="ic">🔔</div><div>${this.t("notif_none")}</div></div>`; return; }
+    if(list.length===0){ w.innerHTML=top+`<div class="card empty"><div class="ic">🔔</div><div>${this.t("notif_none")}</div></div>`; return; }
     const items=list.map(n=>{
-      const isRdv=n.kind==="rdv", isCancel=n.kind==="cancel";
-      const title=isRdv?this.t("notif_new_rdv"):(isCancel?this.t("notif_cancel_file"):this.t("notif_new_file"));
-      const ic=isRdv?"📅":(isCancel?"✖️":"🪑");
-      const when=(isRdv&&n.jour)?`${this.fmtDate(n.jour)} ${this.t("rdv_at")} ${n.heure}`:this.fmtTime(n.ts);
-      return `<div class="notif-item ${n.lu?"":"unread"}" role="button" tabindex="0" onclick="App.goToNotif('${n.kind||"file"}','${n.jour||""}')"><div class="ni-ic">${ic}</div>
-        <div class="ni-txt"><div class="ni-main"><b>${this.escape(n.nom||"Client")}</b> — ${this.escape(this.notifSvcName(n))}</div>
-          <div class="ni-sub">${title} · ${when}</div></div><div class="ni-go">›</div></div>`;
+      const kind=this.NOTIF_KINDS[n.kind]?n.kind:"file";          // liste blanche (donnée écrite par un client)
+      const [ic,key]=this.NOTIF_KINDS[kind];
+      const jour=/^\d{4}-\d{2}-\d{2}$/.test(n.jour||"")?n.jour:"";
+      let detail;
+      if(kind==="avis") detail="★".repeat(Math.max(0,Math.min(5,parseInt(n.note,10)||0)));
+      else if(kind==="inscription") detail=n.tel?"📞 "+this.phoneFmt(n.tel):"";
+      else detail=this.escape(this.notifSvcName(n));
+      const when=(kind==="rdv"&&jour)?`${this.fmtDate(jour)} ${this.t("rdv_at")} ${this.escape(n.heure||"")}`:this.fmtTime(n.ts);
+      return `<div class="notif-item ${n.lu?"":"unread"}" role="button" tabindex="0" onclick="App.goToNotif('${kind}','${jour}')"><div class="ni-ic">${ic}</div>
+        <div class="ni-txt"><div class="ni-main"><b>${this.escape(n.nom||"Client")}</b>${detail?" — "+detail:""}</div>
+          <div class="ni-sub">${this.t(key)} · ${when}</div></div><div class="ni-go">›</div></div>`;
     }).join("");
-    w.innerHTML=enableBtn+items;
+    w.innerHTML=top+items;
   },
   toggleNotifs(){ const p=document.getElementById("notif-panel"); if(p&&p.classList.contains("show")) this.closeNotifs(); else this.openNotifs(); },
   openNotifs(){
@@ -1667,13 +1952,17 @@ const App = {
     const p=document.getElementById("notif-panel"), b=document.getElementById("notif-backdrop");
     if(p) p.classList.remove("show"); if(b) b.classList.remove("show");
   },
-  /* ouvre l'écran concerné par la notification (rendez-vous → agenda, file/annulation → file) */
+  /* ouvre l'écran concerné par la notification */
   goToNotif(kind, jour){
     this.closeNotifs();
     if(!this.isAdmin()) return;
     if(kind==="rdv"){
       if(jour){ this._agendaSel=jour; const d=new Date(jour); if(!isNaN(d.getTime())){ d.setDate(1); this._agendaMonth=d; } }
       this.showTab("tab-agenda","admin-nav"); this.renderAgenda();
+    } else if(kind==="avis"){
+      this.showTab("tab-areviews","admin-nav");
+    } else if(kind==="inscription"){
+      this.showTab("tab-users","admin-nav");
     } else {
       this.showTab("tab-queue","admin-nav"); this.renderQueue();
     }
@@ -1682,39 +1971,71 @@ const App = {
     const arr=DB.get("notifs",[]); let ch=false;
     arr.forEach(n=>{ if(!n.lu){ n.lu=true; ch=true; } });
     if(ch) DB.set("notifs",arr);
+    this.pruneNotifs();
     this.renderBell();
   },
   clearNotifs(){
     DB.get("notifs",[]).slice().forEach(n=>DB.del("notifs", n.id));
     this.renderNotifsPanel(); this.renderBell();
   },
+  /* Clé publique "Web Push" : Firebase → Paramètres du projet → Cloud Messaging → Certificats Web Push */
   VAPID_KEY:"BFu7v6KYFzUHqkQotcX6mF_IK4Ehe8iCkr0h40Jjqh9hf-tGOzfAfvZ8GRd7XLiovhsM6HYPjAlRJvBhB3K-HxA",
-  /* Active les notifications push (Firebase Cloud Messaging) sur CE téléphone */
-  async requestAlerts(){
-    if(!("Notification" in window)){ this.toast(this.t("notif_denied")); return; }
-    try{
-      const perm = await Notification.requestPermission();
-      if(perm!=="granted"){ this.toast(this.t("notif_denied")); return; }
-      let messaging;
-      try{ messaging = firebase.messaging(); }catch(e){ this.toast(this.t("notif_denied")); return; }
-      let reg = this._swReg;
-      if(!reg && navigator.serviceWorker){ try{ reg = await navigator.serviceWorker.ready; }catch(e){} }
-      const token = await messaging.getToken({ vapidKey:this.VAPID_KEY, serviceWorkerRegistration:reg||undefined });
-      if(!token){ this.toast(this.t("notif_denied")); return; }
-      await this.savePushToken(token);
-      this.bindForegroundPush(messaging);
-      this.toast(this.t("notif_enabled"));
-    }catch(e){ console.warn("push:", e); this.toast(this.t("notif_denied")); }
+  swReady(){
+    if(this._swReg) return Promise.resolve(this._swReg);
+    if(!("serviceWorker" in navigator)) return Promise.resolve(undefined);
+    return Promise.race([ navigator.serviceWorker.ready, new Promise(r=>setTimeout(()=>r(undefined), 4000)) ]);
   },
-  /* enregistre le jeton de ce téléphone pour le gérant (plusieurs appareils possibles) */
-  async savePushToken(token){
+  /* Active les notifications push (FCM) sur CE téléphone — réservé aux admins.
+     silent=true : ré-enregistrement automatique à l'ouverture, sans jamais demander l'autorisation. */
+  async requestAlerts(silent){
+    if(!this.isAdmin()) return;
+    if(!("Notification" in window) || !("serviceWorker" in navigator)){ if(!silent) this.toast(this.t("notif_unsupported")); return; }
     try{
-      if(!DB.db) return;
-      await DB.db.collection("fcmTokens").doc("admin").set({
-        tokens: firebase.firestore.FieldValue.arrayUnion(token),
-        updatedAt: new Date().toISOString()
-      }, { merge:true });
-    }catch(e){ console.warn("savePushToken:", e); }
+      let perm=Notification.permission;
+      if(perm!=="granted"){
+        if(silent) return;
+        perm=await Notification.requestPermission();
+      }
+      if(perm!=="granted"){ if(!silent) this.toast(this.t("notif_denied")); return; }
+      const messaging=firebase.messaging();
+      const reg=await this.swReady();
+      const token=await messaging.getToken({ vapidKey:this.VAPID_KEY, serviceWorkerRegistration:reg });
+      if(!token){ if(!silent) this.toast(this.t("notif_denied")); return; }
+      await this.savePushToken(token);
+      this._pushToken=token;
+      this.bindForegroundPush(messaging);
+      if(!silent) this.toast(this.t("notif_enabled"));
+      this.renderNotifsPanel();
+    }catch(e){ console.warn("push:", e); if(!silent) this.toast(this.t("notif_denied")+(e&&e.code?" ("+e.code+")":"")); }
+  },
+  /* jetons des téléphones admin (plusieurs appareils / plusieurs admins possibles) */
+  async savePushToken(token){
+    if(!DB.db) return;
+    await DB.db.collection("fcmTokens").doc("admin").set({
+      tokens: firebase.firestore.FieldValue.arrayUnion(token),
+      updatedAt: new Date().toISOString(), updatedBy: DB.uid||null
+    }, { merge:true });
+  },
+  /* à la déconnexion d'un admin : ce téléphone ne reçoit plus les alertes */
+  async removePushToken(){
+    if(!("Notification" in window) || Notification.permission!=="granted" || !DB.db) return;
+    try{
+      const messaging=firebase.messaging();
+      let token=this._pushToken;
+      if(!token){ const reg=await this.swReady(); token=await messaging.getToken({ vapidKey:this.VAPID_KEY, serviceWorkerRegistration:reg }); }
+      if(token) await DB.db.collection("fcmTokens").doc("admin").update({ tokens: firebase.firestore.FieldValue.arrayRemove(token) });
+      await messaging.deleteToken();
+      this._pushToken=null;
+    }catch(e){ console.warn("removePushToken:", e); }
+  },
+  /* envoie une notification de test à tous les téléphones admin */
+  testPush(){
+    return this.busy("btn-test-push", async ()=>{
+      try{
+        await DB.db.collection("pushTests").add({ by:DB.uid, at:Date.now() });   // déclenche la Cloud Function notifTest
+        this.toast(this.t("t_test_sent"));
+      }catch(e){ this.toast(this.authError(e)); }
+    });
   },
   /* notification affichée quand l'app est OUVERTE au premier plan */
   bindForegroundPush(messaging){
@@ -1733,10 +2054,7 @@ const App = {
       });
     }catch(e){}
   },
-  /* alerte système (téléphone/tablette) au premier plan quand une nouvelle notif arrive */
-  /* (Remplacé) Les alertes système passent désormais par Firebase Cloud Messaging :
-     voir requestAlerts() et bindForegroundPush(). Conservé vide pour les appels existants. */
-  maybeAlert(){ /* no-op */ },
+  maybeAlert(){ /* conservé vide pour compatibilité : les alertes passent par FCM */ },
 
   /* =================== CLIENT : RENDEZ-VOUS (date + heure) =================== */
   rdvTaken(date){ const set=new Set(); DB.get("bookings",[]).forEach(b=>{ if(b.type==="rdv" && b.jour===date && b.statut!=="annule" && b.heure) set.add(b.heure); }); return set; },
@@ -1796,7 +2114,7 @@ const App = {
     const mine=this.myRdv(u);
     const mineHTML = mine.length ? mine.map(b=>`<div class="rdv-row">
         <div class="rdv-time">${b.heure||"—"}</div>
-        <div class="rdv-body"><div class="rdv-who">${b.icon} ${this.bName(b)}</div>
+        <div class="rdv-body"><div class="rdv-who">${this.bIcon(b)} ${this.bName(b)}</div>
           <div class="rdv-sub">${this.fmtDate(b.jour)} · <span class="tk-status st-${b.statut}">${this.t("status_"+b.statut)}</span></div></div>
         <div class="acts"><button class="btn btn-danger btn-sm" onclick="App.cancelRdvClient('${b.id}')">${this.t("cancel_rdv")}</button></div>
       </div>`).join("") : `<div class="card empty"><div class="ic">📅</div><div>${this.t("rdv_none")}</div></div>`;
@@ -1826,7 +2144,7 @@ const App = {
       prix:s.prix, prixBase:s.prix, remisePct:0, gratuit:false, duree:s.duree,
       statut:"attente", jour, heure, createdAt:Date.now(), startAt:null, endAt:null };
     const bs=DB.get("bookings",[]); bs.push(b); DB.set("bookings",bs);
-    this.pushNotif("rdv", b); this.notifyAdmin(b);
+    this.pushNotif("rdv", b);
     this._rdv={serviceId:null, dt:""};
     this.toast(this.t("t_rdv_booked")); this.renderRdvClient();
   },
@@ -1888,7 +2206,7 @@ const App = {
       return `<div class="rdv-row">
         <div class="rdv-time">${b.heure||"—"}</div>
         <div class="rdv-body"><div class="rdv-who">${this.escape(b.clientNom||"—")} <span class="tk-status st-${b.statut}" style="font-size:.6rem">${this.t("status_"+b.statut)}</span></div>
-          <div class="rdv-sub">${b.icon} ${this.bName(b)} · ${this.fmtMoney(b.prix)}${tel?` · 📞 ${tel}`:""}</div></div>
+          <div class="rdv-sub">${this.bIcon(b)} ${this.bName(b)} · ${this.fmtMoney(b.prix)}${tel?` · 📞 ${tel}`:""}</div></div>
         <div class="acts">${a}</div></div>`;
     }).join("") : `<div class="card empty"><div class="ic">📅</div><div>${this.t("agenda_none_day")}</div></div>`;
 
@@ -1957,7 +2275,7 @@ const App = {
     const openList = open.map(b=>{
       const tip=this.tip(b);
       return `<div class="cash-line">
-        <div><div class="who">${b.icon} ${this.escape(b.clientNom||this.bName(b))}</div>
+        <div><div class="who">${this.bIcon(b)} ${b.clientNom?this.escape(b.clientNom):this.bName(b)}</div>
           <div class="sub">${this.bName(b)}${b.finishedAt?" · "+this.fmtTime(b.finishedAt):""}</div></div>
         <div class="amt-edit"><span class="price-pill">${this.montant(b)} ${this.t("dt")}${tip?`<span class="tag-tip">+${tip} ${this.t("dt")}</span>`:""}</span>
           <button class="mini-btn" title="${this.t("edit_amount")}" onclick="App.editAmount('${b.id}')">✏️</button></div></div>`;
@@ -1975,7 +2293,7 @@ const App = {
       const u=usersById[b.userId]; const tel=(u&&u.tel)?this.phoneFmt(u.tel):"—"; const tip=this.tip(b);
       return `<div class="cash-line">
         <div><div class="who">${this.escape(b.clientNom||(u?u.nom:"—"))}</div>
-          <div class="sub">${b.icon} ${this.bName(b)} · 📞 ${tel} · ${this.fmtDate(b.jour)}</div></div>
+          <div class="sub">${this.bIcon(b)} ${this.bName(b)} · 📞 ${tel} · ${this.fmtDate(b.jour)}</div></div>
         <div class="amt-edit"><span class="price-pill">${this.montant(b)} ${this.t("dt")}${tip?`<span class="tag-tip">+${tip}</span>`:""}</span>
           <button class="mini-btn" title="${this.t("edit_amount")}" onclick="App.editAmount('${b.id}')">✏️</button>
           <button class="mini-btn danger" title="${this.t("delete")}" onclick="App.deleteBooking('${b.id}')">🗑</button></div></div>`;
@@ -2163,52 +2481,121 @@ const App = {
   deleteService(id){ if(!window.confirm(this.t("confirm_del_svc"))) return;
     DB.set("services", this.services().filter(s=>s.id!==id)); this.toast(this.t("t_svc_deleted")); this.renderSvcAdmin(); },
 
-  /* =================== ADMIN : UTILISATEURS (CRUD) =================== */
+  /* =================== ADMIN : COMPTES & RÔLES =================== */
   renderUsers(){
     const w=document.getElementById("users-content"); if(!w) return;
+    if(!this.isAdmin()){ w.innerHTML=""; return; }
+    // le formulaire n'est redessiné qu'au changement de langue (sinon la saisie serait effacée à chaque mise à jour)
+    if(!document.getElementById("au-name") || this._usersFormLang!==this.lang){
+      const keep={}; ["au-name","au-email","au-pass"].forEach(i=>{ const el=document.getElementById(i); if(el) keep[i]=el.value; });
+      w.innerHTML=`<div class="card" style="margin-bottom:16px">
+          <div class="tk-label" style="color:var(--brass-soft);margin-bottom:10px">${this.t("add_admin")}</div>
+          <div class="field"><label for="au-name">${this.t("name_label")}</label><input class="input" id="au-name" autocomplete="off" /></div>
+          <div class="field"><label for="au-email">${this.t("email_label")}</label><input class="input" id="au-email" type="email" inputmode="email" autocomplete="off" placeholder="${this.t("email_ph")}" /></div>
+          <div class="field"><label for="au-pass">${this.t("admin_pass_label")}</label><input class="input" id="au-pass" type="text" autocomplete="new-password" />
+            <span class="fhint">${this.t("password_hint")} ${this.t("add_admin_hint")}</span></div>
+          <button class="btn btn-brass btn-block" id="btn-add-admin" onclick="App.addAdmin()">${this.t("add")}</button>
+        </div><div id="users-list"></div>`;
+      Object.keys(keep).forEach(i=>{ const el=document.getElementById(i); if(el) el.value=keep[i]; });
+      this._usersFormLang=this.lang;
+    }
     const users=DB.get("users",[]); const me=this.currentUser();
-    const adminCount=users.filter(u=>u.role==="admin").length;
-    const addForm=`<div class="card" style="margin-bottom:16px">
-        <div class="tk-label" style="color:var(--brass-soft);margin-bottom:10px">${this.t("add_admin")}</div>
-        <div class="field"><label>${this.t("name_label")}</label><input class="input" id="au-name" /></div>
-        <div class="field"><label>${this.t("username_label")}</label><input class="input" id="au-user" /></div>
-        <div class="field"><label>${this.t("password_label")}</label><input class="input" id="au-pass" type="text" /></div>
-        <button class="btn btn-brass btn-block" onclick="App.addAdmin()">${this.t("add")}</button>
-      </div>`;
-    const rows=users.map(u=>{
-      const isMe=me&&u.id===me.id;
-      const canDel=!isMe && !(u.role==="admin"&&adminCount<=1);
-      return `<div class="queue-row">
-        <div class="pos">${u.role==="admin"?"★":"👤"}</div>
-        <div><div class="who">${u.nom||u.username} ${isMe?`<span class="badge badge-admin">${this.t("you_badge")}</span>`:""}</div>
-          <div class="sub">${u.username} · <span class="badge ${u.role==="admin"?"badge-admin":"badge-client"}">${this.t("role_"+u.role)}</span></div></div>
-        <div class="acts">
-          <button class="btn btn-ghost btn-sm" onclick="App.changePassword('${u.id}')">🔑</button>
-          <button class="btn btn-danger btn-sm" onclick="App.deleteUser('${u.id}')" ${canDel?"":"disabled"}>✕</button>
-        </div></div>`;
-    }).join("");
-    w.innerHTML=addForm+(users.length?rows:`<div class="card empty"><div class="ic">👥</div><div>${this.t("no_clients")}</div></div>`);
+    const activeAdmins=users.filter(u=>u.role==="admin" && !u.disabled && !u.legacy).length;
+    const rowHTML=u=>{
+      const isMe=!!(me&&u.id===me.id), isAdm=u.role==="admin", legacy=!!u.legacy, blocked=!!u.disabled;
+      const id=String(u.id).replace(/[^\w-]/g,"");
+      const name=this.escape(u.nom||u.email||u.username||"—");
+      let badges=`<span class="badge ${isAdm?"badge-admin":"badge-client"}">${this.t(isAdm?"role_admin":"role_client")}</span>`;
+      if(isMe) badges+=` <span class="badge badge-admin">${this.t("you_badge")}</span>`;
+      if(blocked) badges+=` <span class="badge badge-blocked">${this.t("badge_blocked")}</span>`;
+      if(legacy) badges+=` <span class="badge badge-legacy">${this.t("badge_legacy")}</span>`;
+      const phone=u.tel||u.username||"";
+      const contact=[ u.email?this.escape(u.email):(legacy?"":this.t("no_email")), phone?"📞 "+this.phoneFmt(phone):"" ].filter(Boolean).join(" · ");
+      let acts="";
+      if(legacy){
+        acts=`<button class="btn btn-danger btn-sm" title="${this.t("delete")}" aria-label="${this.t("delete")}" onclick="App.deleteLegacyUser('${id}')">🗑</button>`;
+      } else {
+        if(!isMe && !blocked){
+          acts+= isAdm
+            ? `<button class="btn btn-ghost btn-sm" onclick="App.setRole('${id}','client')" ${activeAdmins<=1?"disabled":""}>👤 ${this.t("make_client")}</button>`
+            : `<button class="btn btn-ghost btn-sm" onclick="App.setRole('${id}','admin')">★ ${this.t("make_admin")}</button>`;
+        }
+        if(u.email) acts+=`<button class="btn btn-ghost btn-sm" title="${this.t("send_reset")}" aria-label="${this.t("send_reset")}" onclick="App.adminSendReset('${id}')">🔑</button>`;
+        if(!isMe && !isAdm){
+          acts+= blocked
+            ? `<button class="btn btn-ok btn-sm" onclick="App.setBlocked('${id}',false)">${this.t("unblock")}</button>`
+            : `<button class="btn btn-danger btn-sm" onclick="App.setBlocked('${id}',true)">${this.t("block")}</button>`;
+        }
+      }
+      return `<div class="queue-row ${blocked?"is-blocked":""}">
+        <div class="pos">${isAdm?"★":"👤"}</div>
+        <div><div class="who">${name}</div><div class="sub">${contact}${contact?"<br>":""}${badges}</div></div>
+        <div class="acts">${acts}</div></div>`;
+    };
+    const byName=(a,b)=>(a.role==="admin"?0:1)-(b.role==="admin"?0:1) || (a.nom||"").localeCompare(b.nom||"");
+    const current=users.filter(u=>!u.legacy).sort(byName), old=users.filter(u=>u.legacy).sort(byName);
+    let html = current.length ? current.map(rowHTML).join("") : `<div class="card empty"><div class="ic">👥</div><div>${this.t("no_clients")}</div></div>`;
+    if(old.length){
+      html+=`<div class="section-head mt"><h2 style="font-size:1.05rem">${this.t("badge_legacy")} (${old.length})</h2></div>
+        <p class="hint" style="margin-bottom:12px">${this.t("legacy_hint")}</p>`+old.map(rowHTML).join("");
+    }
+    document.getElementById("users-list").innerHTML=html;
   },
+  _userById(id){ const users=DB.get("users",[]); return { users, u:users.find(x=>String(x.id)===String(id)) }; },
+  /* promouvoir / rétrograder (le rôle est lu par l'app ET par les règles Firestore) */
+  setRole(id, role){
+    const {users,u}=this._userById(id); if(!u || u.legacy) return;
+    const me=this.currentUser(); if(me && me.id===u.id) return;
+    if(role!=="admin" && u.role==="admin" && users.filter(x=>x.role==="admin" && !x.disabled && !x.legacy).length<=1) return this.toast(this.t("t_last_admin"));
+    const who=u.nom||u.email||"";
+    if(!window.confirm(role==="admin"?this.t("confirm_make_admin")(who):this.t("confirm_make_client")(who))) return;
+    u.role = role==="admin" ? "admin" : "client";
+    DB.set("users",users); this.toast(this.t("t_role_changed")); this.renderUsers();
+  },
+  setBlocked(id, on){
+    const {users,u}=this._userById(id); if(!u || u.legacy || u.role==="admin") return;
+    const me=this.currentUser(); if(me && me.id===u.id) return;
+    if(on && !window.confirm(this.t("confirm_block")(u.nom||u.email||""))) return;
+    u.disabled=!!on;
+    DB.set("users",users); this.toast(this.t(on?"t_blocked_ok":"t_unblocked_ok")); this.renderUsers();
+  },
+  async adminSendReset(id){
+    const {u}=this._userById(id); if(!u || !u.email) return;
+    if(!window.confirm(this.t("confirm_send_reset")(u.email))) return;
+    try{ await this.sendReset(u.email); this.toast(this.t("t_reset_sent_admin")); }
+    catch(e){ this.toast(this.authError(e)); }
+  },
+  deleteLegacyUser(id){
+    const {u}=this._userById(id); if(!u || !u.legacy) return;
+    if(!window.confirm(this.t("confirm_del_legacy"))) return;
+    DB.del("users", u.id); this.toast(this.t("t_user_deleted")); this.renderUsers();
+  },
+  /* crée le compte Firebase d'un nouvel admin SANS déconnecter l'admin actuel
+     (la création passe par une 2e instance Firebase, dédiée et sans session mémorisée) */
   addAdmin(){
-    const nom=document.getElementById("au-name").value.trim();
-    const user=this.normPhone(document.getElementById("au-user").value);
-    const pass=document.getElementById("au-pass").value.trim();
-    if(!nom||!user||!pass) return this.toast(this.t("t_fill"));
-    const users=DB.get("users",[]);
-    if(users.some(u=>u.username===user)) return this.toast(this.t("t_id_taken"));
-    users.push({id:"u"+Date.now(), role:"admin", username:user, password:pass, nom, tel:"", createdAt:Date.now()});
-    DB.set("users",users); this.toast(this.t("t_user_added")); this.renderUsers();
-  },
-  changePassword(id){
-    const users=DB.get("users",[]); const u=users.find(x=>x.id===id); if(!u) return;
-    const v=window.prompt(this.t("new_password"), ""); if(v===null||!v.trim()) return;
-    u.password=v.trim(); DB.set("users",users); this.toast(this.t("t_saved"));
-  },
-  deleteUser(id){
-    const users=DB.get("users",[]); const u=users.find(x=>x.id===id); if(!u) return;
-    if(u.role==="admin" && users.filter(x=>x.role==="admin").length<=1) return this.toast(this.t("t_last_admin"));
-    if(!window.confirm(this.t("confirm_del_user"))) return;
-    DB.set("users", users.filter(x=>x.id!==id)); this.toast(this.t("t_user_deleted")); this.renderUsers();
+    return this.busy("btn-add-admin", async ()=>{
+      const nom=document.getElementById("au-name").value.trim();
+      const email=this.normEmail(document.getElementById("au-email").value);
+      const pass=document.getElementById("au-pass").value.trim();
+      if(!nom||!email||!pass) return this.toast(this.t("t_fill"));
+      if(pass.length<6) return this.toast(this.t("err_weak_pass"));
+      let sec=null;
+      try{
+        sec=firebase.apps.find(a=>a.name==="creation-admin") || firebase.initializeApp(firebaseConfig, "creation-admin");
+        const sa=sec.auth();
+        await sa.setPersistence(firebase.auth.Auth.Persistence.NONE);
+        const cred=await sa.createUserWithEmailAndPassword(email, pass);
+        const uid=cred.user.uid;
+        await cred.user.updateProfile({displayName:nom}).catch(()=>{});
+        await DB.db.collection("users").doc(uid).set({ id:uid, role:"admin", nom, tel:"", email, lang:this.lang||"fr", createdAt:Date.now(), _by:DB.uid, _at:Date.now() });
+        await sa.signOut().catch(()=>{});
+        ["au-name","au-email","au-pass"].forEach(i=>{ const el=document.getElementById(i); if(el) el.value=""; });
+        this.toast(this.t("t_admin_created")); this.renderUsers();
+      }catch(e){
+        this.toast(e && e.code==="auth/email-already-in-use" ? this.t("err_email_taken_admin") : this.authError(e));
+        try{ if(sec) await sec.auth().signOut(); }catch(_){}
+      }
+    });
   },
 
   /* =================== AVIS =================== */
@@ -2219,8 +2606,10 @@ const App = {
   submitReview(){
     if(this.reviewStars<1) return this.toast(this.t("review_need_text"));
     const u=this.currentUser(); const texte=document.getElementById("review-text").value.trim();
-    const avis=DB.get("avis",[]); avis.push({id:"a"+Date.now(), userId:u.id, nom:u.nom, note:this.reviewStars, texte, ts:Date.now()});
-    DB.set("avis",avis); document.getElementById("review-text").value=""; this.reviewStars=0; this.paintStars();
+    const a={id:"a"+Date.now(), userId:u.id, nom:u.nom||"", note:this.reviewStars, texte:texte.slice(0,1000), ts:Date.now()};
+    const avis=DB.get("avis",[]); avis.push(a); DB.set("avis",avis);
+    this.pushNotif("avis", { clientNom:a.nom, note:a.note });
+    document.getElementById("review-text").value=""; this.reviewStars=0; this.paintStars();
     this.toast(this.t("thanks_review")); this.renderReviews();
   },
   reviewsHTML(admin){
@@ -2290,11 +2679,11 @@ const App = {
       <div class="stat-card"><div class="lbl">${this.t("stat_total")}</div><div class="big">${sum(all)}<small> ${this.t("dt")}</small></div><div class="sub">${all.length} ${this.t("services_done")}</div></div>
       <div class="stat-card"><div class="lbl">${this.t("stat_clients")}</div><div class="big">${clients}</div></div></div>`;
     const byId={};
-    all.forEach(b=>{ const k=b.serviceId||b.nom_fr; (byId[k]=byId[k]||{n:0,icon:b.icon,name:this.bName(b)}).n++; });
+    all.forEach(b=>{ const k=b.serviceId||b.nom_fr; (byId[k]=byId[k]||{n:0,icon:b.icon,name:this.bNameRaw(b)}).n++; });
     const top=Object.values(byId).sort((a,b)=>b.n-a.n).slice(0,5);
     const maxN=Math.max(...top.map(x=>x.n),1);
     const topHTML=`<div class="card set-card"><div class="hd">🏆 ${this.t("stat_top")}</div><div class="bar-list">${
-      top.map(x=>`<div class="bar-item"><div class="top"><span>${x.icon} ${this.escape(x.name)}</span><span class="v">${this.t("times_label")(x.n)}</span></div>
+      top.map(x=>`<div class="bar-item"><div class="top"><span>${this.escape(x.icon)} ${this.escape(x.name)}</span><span class="v">${this.t("times_label")(x.n)}</span></div>
         <div class="bar-track brass"><span style="width:${Math.round(x.n/maxN*100)}%"></span></div></div>`).join("")}</div></div>`;
     const hrs=new Array(24).fill(0);
     all.forEach(b=>{ hrs[new Date(b.startAt||b.createdAt||0).getHours()]++; });
@@ -2362,19 +2751,22 @@ const App = {
     DB.set("loyalty",L); this.toast(this.t("t_loyalty_saved")); this.renderAll(); },
 
   /* =================== RENDU GLOBAL + HORLOGE =================== */
+  /* on ne dessine QUE l'espace correspondant au rôle connecté */
   renderAll(){
-    this.renderServices(); this.renderMyTurn(); this.renderQueue(); this.renderCash();
-    this.renderSvcAdmin(); this.renderUsers(); this.renderReviews();
-    this.renderStats(); this.renderSettings();
-    this.renderRdvClient(); this.renderAgenda(); this.renderBell();
-    this.renderAbout("client"); this.renderAbout("admin");
-    this.maybeAlert();
+    if(!this.profile || !this.lang) return;
+    if(this.isAdmin()){
+      this.renderQueue(); this.renderAgenda(); this.renderCash(); this.renderStats();
+      this.renderSvcAdmin(); this.renderUsers(); this.renderReviews(); this.renderSettings();
+      this.renderBell(); this.renderAbout("admin");
+    } else {
+      this.renderServices(); this.renderMyTurn(); this.renderRdvClient(); this.renderReviews();
+      this.renderAbout("client");
+    }
   },
   tick(){
-    if(!this.session) return;
+    const u=this.currentUser(); if(!u || !this._dataReady) return;
     const ct=document.getElementById("tab-myturn"), aq=document.getElementById("tab-queue");
-    const u=this.currentUser(); if(!u) return;
-    if(u.role==="client" && ct && ct.classList.contains("active")) this.renderMyTurn();
+    if(u.role!=="admin" && ct && ct.classList.contains("active")) this.renderMyTurn();
     if(u.role==="admin" && aq && aq.classList.contains("active")) this.renderQueue();
   },
   toast(msg){ const el=document.getElementById("toast"); el.textContent=msg; el.classList.add("show");

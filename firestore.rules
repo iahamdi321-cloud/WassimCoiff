@@ -1,0 +1,107 @@
+rules_version = '2';
+
+// =====================================================================
+//  WASSIM COIFF — Règles de sécurité Firestore
+//  Rôles : le document users/{uid} contient  role = "admin"  ou  "client".
+//  À publier dans : Console Firebase → Firestore Database → Règles → Publier
+//  (ou en ligne de commande : firebase deploy --only firestore:rules)
+// =====================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn()   { return request.auth != null; }
+    function hasProfile() { return signedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)); }
+    function me()         { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function isActive()   { return hasProfile() && me().get('disabled', false) != true; }
+    function isAdmin()    { return isActive() && me().get('role', 'client') == 'admin'; }
+    function isSelf(uid)  { return signedIn() && request.auth.uid == uid; }
+    function changedKeys(){ return request.resource.data.diff(resource.data).affectedKeys(); }
+    function str(v, max)  { return v is string && v.size() <= max; }
+
+    // ---------- Profils et rôles ----------
+    match /users/{uid} {
+      allow read: if isSelf(uid) || isAdmin();
+      // Inscription : on ne crée QUE son propre profil, et toujours avec le rôle "client".
+      allow create: if isAdmin() || (
+        isSelf(uid)
+        && request.resource.data.keys().hasOnly(['id','role','nom','tel','email','lang','createdAt','_by','_at'])
+        && request.resource.data.id == uid
+        && request.resource.data.role == 'client'
+        && str(request.resource.data.nom, 80)
+        && str(request.resource.data.get('tel', ''), 30)
+        && str(request.resource.data.get('email', ''), 200));
+      // Un client peut modifier ses infos, jamais son rôle ni son blocage.
+      allow update: if isAdmin() || (
+        isSelf(uid) && isActive()
+        && !changedKeys().hasAny(['role','disabled','id','email','legacy']));
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Carte des prestations et réglages ----------
+    match /services/{id} { allow read: if isActive(); allow write: if isAdmin(); }
+    match /config/{id}   { allow read: if isActive(); allow write: if isAdmin(); }
+
+    // ---------- Réservations (file d'attente + rendez-vous) ----------
+    function validClientBooking(bookingId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['id','userId','clientNom','type','serviceId','icon','nom_fr','nom_ar',
+                               'prix','prixBase','remisePct','gratuit','duree','statut','jour','heure',
+                               'createdAt','startAt','endAt','_by','_at'])
+        && d.id == bookingId
+        && d.userId == request.auth.uid
+        && d._by == request.auth.uid
+        && d.type in ['file','rdv']
+        && d.statut == 'attente'
+        && str(d.clientNom, 80) && str(d.icon, 16) && str(d.nom_fr, 80) && str(d.nom_ar, 80) && str(d.serviceId, 60)
+        && d.prix is number && d.duree is number
+        && d.jour is string && d.jour.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && ((d.type == 'file' && !('heure' in d))
+            || (d.type == 'rdv' && d.get('heure', '') is string && d.get('heure', '').matches('^[0-9]{2}:[0-9]{2}$')));
+    }
+    match /bookings/{bookingId} {
+      allow read: if isActive();
+      allow create: if isAdmin() || (isActive() && validClientBooking(bookingId));
+      // Le client peut seulement ANNULER sa propre réservation, tant qu'elle n'a pas commencé.
+      allow update: if isAdmin() || (
+        isActive()
+        && resource.data.userId == request.auth.uid
+        && resource.data.statut in ['attente','valide']
+        && request.resource.data.statut == 'annule'
+        && request.resource.data._by == request.auth.uid
+        && changedKeys().hasOnly(['statut','_by','_at']));
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Avis ----------
+    match /avis/{avisId} {
+      allow read: if isActive();
+      allow create: if isAdmin() || (
+        isActive()
+        && request.resource.data.keys().hasOnly(['id','userId','nom','note','texte','ts','_by','_at'])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data._by == request.auth.uid
+        && request.resource.data.note is int
+        && request.resource.data.note >= 1 && request.resource.data.note <= 5
+        && str(request.resource.data.nom, 80)
+        && str(request.resource.data.get('texte', ''), 1000));
+      allow update, delete: if isAdmin();   // réponse, masquer, supprimer
+    }
+
+    // ---------- Cloche de l'admin : un client peut seulement en créer ----------
+    match /notifs/{notifId} {
+      allow create: if isActive()
+        && request.resource.data.keys().hasOnly(['id','kind','nom','service_fr','service_ar','jour','heure','note','tel','ts','lu','_by','_at'])
+        && request.resource.data._by == request.auth.uid
+        && request.resource.data.kind in ['file','rdv','cancel','avis','inscription']
+        && str(request.resource.data.nom, 80);
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ---------- Réservé aux administrateurs ----------
+    match /caisses/{id}   { allow read, write: if isAdmin(); }
+    match /fcmTokens/{id} { allow read, write: if isAdmin(); }    // téléphones qui reçoivent les alertes
+    match /pushTests/{id} { allow create, read, delete: if isAdmin(); }
+
+    // Tout le reste est interdit par défaut.
+  }
+}
