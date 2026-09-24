@@ -23,6 +23,10 @@
    Chaque envoi est réservé dans la collection « pushLog » (par le robot OU
    par la Cloud Function) : jamais deux fois le même message.
 
+   Il termine aussi la SUPPRESSION des comptes demandée par l'admin
+   (onglet Comptes → 🗑) : compte de connexion Firebase, profil, numéro,
+   téléphones enregistrés. L'historique de la caisse est conservé.
+
    Test à blanc (n'envoie rien, affiche seulement) :
      DRY_RUN=1 FIREBASE_SERVICE_ACCOUNT="$(cat cle.json)" node envoyer-rappels.mjs
    ===================================================================== */
@@ -30,6 +34,7 @@
 import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
+import { getAuth } from "firebase-admin/auth";
 
 /* ---------------------------------------------------------------- */
 /*  Réglages                                                         */
@@ -73,6 +78,26 @@ const hm2min     = (hm) => { const [h, m] = String(hm || "").split(":").map((n) 
 
 console.log(`— Rappels ${SALON} — ${AUJOURDHUI} ${String(L.h).padStart(2, "0")}:${String(L.m).padStart(2, "0")} (Tunis)` +
             `${DRY_RUN ? " — TEST À BLANC" : ""}`);
+
+/* ---------------------------------------------------------------- */
+/*  0) Comptes supprimés par l'admin → suppression définitive        */
+/* ---------------------------------------------------------------- */
+let comptesSupprimes = 0;
+if (!DRY_RUN) {
+  const snapDel = await db.collection("users").where("deleted", "==", true).get();
+  for (const d of snapDel.docs) {
+    try { await getAuth().deleteUser(d.id); }
+    catch (e) {
+      if (!String((e && e.code) || "").includes("user-not-found")) { console.warn(`  ! suppression du compte ${d.id} : ${e && e.code}`); continue; }
+    }
+    const ph = await db.collection("phones").where("uid", "==", d.id).get();
+    const tk = await db.collection("pushTokens").where("userId", "==", d.id).get();
+    await Promise.all([...ph.docs, ...tk.docs].map((x) => x.ref.delete().catch(() => {})));
+    await d.ref.delete();
+    comptesSupprimes++;
+  }
+  if (comptesSupprimes) console.log(`  ${comptesSupprimes} compte(s) supprimé(s) définitivement.`);
+}
 
 /* ---------------------------------------------------------------- */
 /*  Lecture des rendez-vous d'aujourd'hui et de demain               */
