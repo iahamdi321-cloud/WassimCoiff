@@ -493,8 +493,8 @@ a.val:hover{color:var(--brass-soft)}
 
       <!-- Connexion (Firebase Authentication : e-mail + mot de passe) -->
       <div class="card" id="form-login">
-        <div class="field"><label for="log-email" data-i18n="email_label">E-mail</label>
-          <input class="input" id="log-email" type="email" inputmode="email" autocomplete="username" data-i18n-ph="email_ph" placeholder="exemple@gmail.com" /></div>
+        <div class="field"><label for="log-email" data-i18n="login_id_label">E-mail ou numéro de téléphone</label>
+          <input class="input" id="log-email" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" data-i18n-ph="login_id_ph" placeholder="exemple@gmail.com ou 22 333 444" /></div>
         <div class="field"><label for="log-pass" data-i18n="password_label">Mot de passe</label>
           <input class="input" id="log-pass" type="password" autocomplete="current-password" placeholder="••••••" onkeydown="if(event.key==='Enter') App.login()" /></div>
         <button class="btn btn-primary btn-block" id="btn-login" onclick="App.login()" data-i18n="btn_login">Se connecter</button>
@@ -507,8 +507,8 @@ a.val:hover{color:var(--brass-soft)}
         <div class="auth-title" data-i18n="forgot_title">Mot de passe oublié</div>
         <p class="hint" style="margin-bottom:14px" data-i18n="forgot_hint">Entrez l'e-mail de votre compte : vous recevrez un lien pour choisir un nouveau mot de passe.</p>
         <div class="auth-sent" id="forgot-sent" role="status" style="display:none"></div>
-        <div class="field"><label for="fg-email" data-i18n="email_label">E-mail</label>
-          <input class="input" id="fg-email" type="email" inputmode="email" autocomplete="email" data-i18n-ph="email_ph" placeholder="exemple@gmail.com" onkeydown="if(event.key==='Enter') App.forgotPassword()" /></div>
+        <div class="field"><label for="fg-email" data-i18n="login_id_label">E-mail ou numéro de téléphone</label>
+          <input class="input" id="fg-email" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" data-i18n-ph="login_id_ph" placeholder="exemple@gmail.com ou 22 333 444" onkeydown="if(event.key==='Enter') App.forgotPassword()" /></div>
         <button class="btn btn-primary btn-block" id="btn-forgot" onclick="App.forgotPassword()" data-i18n="forgot_send">Envoyer le lien</button>
         <button type="button" class="auth-link" onclick="App.switchAuth('login')" data-i18n="back_login">Retour à la connexion</button>
       </div>
@@ -970,7 +970,7 @@ const I18N = {
     email_label:"E-mail", email_ph:"exemple@gmail.com", email_hint:"Sert à récupérer votre mot de passe.",
     password_hint:"6 caractères minimum.",
     forgot_link:"Mot de passe oublié ?", forgot_title:"Mot de passe oublié",
-    forgot_hint:"Entrez l'e-mail de votre compte : vous recevrez un lien pour choisir un nouveau mot de passe.",
+    forgot_hint:"Entrez l'e-mail ou le numéro de téléphone de votre compte : vous recevrez un lien par e-mail pour choisir un nouveau mot de passe.",
     forgot_send:"Envoyer le lien", back_login:"Retour à la connexion",
     t_reset_sent:(e)=>"Si un compte existe pour "+e+", un e-mail avec un lien de réinitialisation vient d'être envoyé. Pensez à regarder dans les spams.",
     err_invalid_email:"Adresse e-mail invalide.", err_email_taken:"Un compte existe déjà avec cet e-mail. Connectez-vous ou utilisez « Mot de passe oublié ? ».",
@@ -1002,6 +1002,21 @@ const I18N = {
     confirm_transfer:(a,b,n)=>"Transférer l'historique de « "+a+" » ("+n+" réservation(s)) vers le compte « "+b+" » ?\nL'ancien compte sera supprimé.",
     confirm_transfer_all:(n)=>"Transférer l'historique des "+n+" anciens comptes retrouvés vers les nouveaux comptes ?",
     t_transferred:(n)=>"Historique transféré ✓ ("+n+" réservation(s))",
+    login_id_label:"E-mail ou numéro de téléphone", login_id_ph:"exemple@gmail.com ou 22 333 444",
+    err_bad_id:"E-mail ou numéro de téléphone invalide.",
+    err_bad_phone:"Numéro de téléphone invalide (8 chiffres).",
+    err_phone_used:"Ce numéro est déjà utilisé par un compte. Connectez-vous avec ce numéro (ou « Mot de passe oublié ? »).",
+    t_phone_unknown:"Aucun compte avec ce numéro. Ancien client ? Créez votre compte avec votre e-mail et ce même numéro.",
+    ue_title:(n)=>"✏️ Modifier : "+n,
+    ue_email_locked:"L'e-mail sert à se connecter : seul le client peut le changer (il peut aussi se connecter avec son numéro).",
+    ue_legacy_hint:"Ajoutez son e-mail pour lui créer un vrai compte : il recevra un e-mail pour choisir son mot de passe, puis se connectera avec son e-mail OU son numéro. Son historique et sa fidélité sont gardés.",
+    ue_create:"Créer son compte",
+    err_phone_other:"Ce numéro est déjà utilisé par un autre compte.",
+    err_phone_has_account:"Ce numéro a déjà un compte : si c'est le même client, utilisez « Transférer » (Anciens clients retrouvés).",
+    err_email_has_account:"Cet e-mail a déjà un compte. Si c'est ce client avec le même numéro, il apparaît dans « Anciens clients retrouvés ».",
+    t_account_created:(e)=>"Compte créé ✓ Un e-mail a été envoyé à "+e+" pour choisir son mot de passe.",
+    confirm_delete_user:(n)=>"Supprimer définitivement le compte de « "+n+" » ?\nIl ne pourra plus se connecter. L'historique de la caisse est conservé.",
+    t_user_removed:"Compte supprimé ✓",
     confirm_del_legacy:"Supprimer cet ancien compte ? L'historique des prestations est conservé.",
     /* --- notifications push --- */
     notif_test:"Envoyer une notification de test", t_test_sent:"Test demandé ✓ La notification arrive en quelques secondes (Cloud Functions) ou au prochain passage du robot (15 min max).",
@@ -1168,7 +1183,7 @@ const I18N = {
     email_label:"البريد الإلكتروني", email_ph:"exemple@gmail.com", email_hint:"يُستعمل لاسترجاع كلمة السر.",
     password_hint:"6 أحرف على الأقل.",
     forgot_link:"نسيت كلمة السر؟", forgot_title:"نسيت كلمة السر",
-    forgot_hint:"أدخل البريد الإلكتروني لحسابك: ستصلك رسالة فيها رابط لاختيار كلمة سر جديدة.",
+    forgot_hint:"أدخل البريد الإلكتروني أو رقم الهاتف لحسابك: ستصلك رسالة على بريدك فيها رابط لاختيار كلمة سر جديدة.",
     forgot_send:"إرسال الرابط", back_login:"العودة إلى الدخول",
     t_reset_sent:(e)=>"إذا كان هناك حساب مرتبط بـ "+e+"، فقد أُرسلت إليه رسالة فيها رابط لإعادة تعيين كلمة السر. تحقّق أيضًا من البريد غير المرغوب فيه.",
     err_invalid_email:"عنوان البريد الإلكتروني غير صالح.", err_email_taken:"يوجد حساب بهذا البريد الإلكتروني. سجّل الدخول أو استعمل «نسيت كلمة السر؟».",
@@ -1200,6 +1215,21 @@ const I18N = {
     confirm_transfer:(a,b,n)=>"نقل سجل « "+a+" » ("+n+" حجز) إلى الحساب « "+b+" »؟\nسيُحذف الحساب القديم.",
     confirm_transfer_all:(n)=>"نقل سجل "+n+" حسابات قديمة إلى الحسابات الجديدة؟",
     t_transferred:(n)=>"تم نقل السجل ✓ ("+n+" حجز)",
+    login_id_label:"البريد الإلكتروني أو رقم الهاتف", login_id_ph:"exemple@gmail.com أو 22 333 444",
+    err_bad_id:"البريد الإلكتروني أو رقم الهاتف غير صالح.",
+    err_bad_phone:"رقم الهاتف غير صالح (8 أرقام).",
+    err_phone_used:"هذا الرقم مستعمل في حساب آخر. ادخل بهذا الرقم (أو «نسيت كلمة السر؟»).",
+    t_phone_unknown:"لا يوجد حساب بهذا الرقم. زبون قديم؟ أنشئ حسابك ببريدك الإلكتروني وبنفس الرقم.",
+    ue_title:(n)=>"✏️ تعديل: "+n,
+    ue_email_locked:"البريد الإلكتروني يُستعمل للدخول: الزبون وحده يمكنه تغييره (ويمكنه أيضًا الدخول برقمه).",
+    ue_legacy_hint:"أضف بريده الإلكتروني لإنشاء حساب حقيقي له: ستصله رسالة لاختيار كلمة السر، ثم يدخل ببريده أو برقمه. يبقى سجله ونقاط الوفاء.",
+    ue_create:"إنشاء حسابه",
+    err_phone_other:"هذا الرقم مستعمل في حساب آخر.",
+    err_phone_has_account:"لهذا الرقم حساب بالفعل: إن كان نفس الزبون فاستعمل «نقل» (زبائن قدامى تم العثور عليهم).",
+    err_email_has_account:"لهذا البريد حساب بالفعل. إن كان نفس الزبون وبنفس الرقم فسيظهر في «زبائن قدامى تم العثور عليهم».",
+    t_account_created:(e)=>"تم إنشاء الحساب ✓ أُرسلت رسالة إلى "+e+" لاختيار كلمة السر.",
+    confirm_delete_user:(n)=>"حذف حساب « "+n+" » نهائيًا؟\nلن يتمكن من الدخول. يبقى سجل الصندوق محفوظًا.",
+    t_user_removed:"تم حذف الحساب ✓",
     confirm_del_legacy:"حذف هذا الحساب القديم؟ يبقى سجل الخدمات محفوظًا.",
     /* --- الإشعارات --- */
     notif_test:"إرسال إشعار تجريبي", t_test_sent:"تم طلب التجربة ✓ يصل الإشعار خلال ثوانٍ (Cloud Functions) أو عند المرور القادم للروبوت (15 دقيقة كحد أقصى).",
@@ -1326,6 +1356,7 @@ const App = {
       this.pruneNotifs();
     }
     this.requestAlerts(true);       // ré-enregistre ce téléphone si les notifications sont déjà autorisées (admin ou client)
+    this.ensurePhoneIndex();        // connexion possible avec le numéro de téléphone
     if(this.lang) this.applyLang();
     this.route();
   },
@@ -1457,14 +1488,41 @@ const App = {
     try{ await fn(); } finally { if(b) b.removeAttribute("aria-busy"); }
   },
 
+  /* ---------- numéro de téléphone -> e-mail du compte (collection « phones », lecture d'un seul document) ---------- */
+  async emailForPhone(k){
+    const d=await DB.db.collection("phones").doc(k).get();
+    return d.exists ? String((d.data()||{}).email||"") : "";
+  },
+  savePhoneIndex(k, uid, email){ return DB.db.collection("phones").doc(k).set({ uid, email, at:Date.now() }); },
+  /* à chaque connexion : le numéro du profil pointe bien vers ce compte (comptes créés avant cette version) */
+  async ensurePhoneIndex(){
+    const p=this.profile, u=this.auth && this.auth.currentUser;
+    if(!p || !u || !u.email || p.legacy || !DB.db) return;
+    const k=this.tel8(p.tel); if(!k) return;
+    try{
+      const d=await DB.db.collection("phones").doc(k).get();
+      if(!d.exists || ((d.data()||{}).uid===u.uid && (d.data()||{}).email!==u.email)) await this.savePhoneIndex(k, u.uid, u.email);
+    }catch(e){ console.warn("phones:", e); }
+  },
+  maskEmail(e){ const [a,b]=String(e||"").split("@"); if(!b) return e; return a.slice(0,2)+"***@"+b; },
+  /* identifiant tapé : e-mail OU numéro de téléphone */
+  async resolveLoginId(raw){
+    if(raw.includes("@")) return { email:this.normEmail(raw) };
+    const k=this.tel8(raw); if(!k) return { error:"err_bad_id" };
+    const email=await this.emailForPhone(k);
+    return email ? { email, viaPhone:true } : { unknown:true };
+  },
   login(){
     return this.busy("btn-login", async ()=>{
       const raw=(document.getElementById("log-email").value||"").trim();
-      if(raw && !raw.includes("@") && this.tel8(raw)){ this.oldAccount(); return this.toast(this.t("t_phone_login")); }
-      const email=this.normEmail(raw);
       const pass=document.getElementById("log-pass").value;
-      if(!email||!pass) return this.toast(this.t("t_fill"));
-      if(!this.auth) return this.toast(this.t("err_network"));
+      if(!raw||!pass) return this.toast(this.t("t_fill"));
+      if(!this.auth || !DB.db) return this.toast(this.t("err_network"));
+      let id;
+      try{ id=await this.resolveLoginId(raw); }catch(e){ return this.toast(this.authError(e)); }
+      if(id.error) return this.toast(this.t(id.error));
+      if(id.unknown){ this.oldAccount(); return this.toast(this.t("t_phone_unknown")); }
+      const email=id.email;
       try{
         await this.auth.signInWithEmailAndPassword(email, pass);
         document.getElementById("log-pass").value="";
@@ -1480,8 +1538,11 @@ const App = {
       const email=this.normEmail(document.getElementById("reg-email").value);
       const pass=document.getElementById("reg-pass").value;
       if(!nom||!tel||!email||!pass) return this.toast(this.t("t_fill"));
+      const k=this.tel8(tel);
+      if(!k) return this.toast(this.t("err_bad_phone"));
       if(pass.length<6) return this.toast(this.t("err_weak_pass"));
-      if(!this.auth) return this.toast(this.t("err_network"));
+      if(!this.auth || !DB.db) return this.toast(this.t("err_network"));
+      try{ if(await this.emailForPhone(k)) return this.toast(this.t("err_phone_used")); }catch(e){ /* vérifié à nouveau à la connexion */ }
       this._registering=true;
       try{
         const cred=await this.auth.createUserWithEmailAndPassword(email, pass);
@@ -1489,10 +1550,11 @@ const App = {
         cred.user.updateProfile({displayName:nom}).catch(()=>{});
         // profil + rôle : un nouvel inscrit est TOUJOURS "client" (imposé par les règles Firestore)
         await DB.db.collection("users").doc(uid).set({
-          id:uid, role:"client", nom, tel, email, lang:this.lang||"fr", createdAt:Date.now(), _by:uid, _at:Date.now()
+          id:uid, role:"client", nom, tel:k, email, lang:this.lang||"fr", createdAt:Date.now(), _by:uid, _at:Date.now()
         });
+        await this.savePhoneIndex(k, uid, cred.user.email||email).catch(e=>console.warn("phones:", e));   // connexion possible avec le numéro
         this._registering=false;
-        this.pushNotif("inscription", { clientNom:nom, tel });
+        this.pushNotif("inscription", { clientNom:nom, tel:k });
         document.getElementById("reg-pass").value="";
         this.toast(this.t("t_registered"));
       }catch(e){
@@ -1506,11 +1568,16 @@ const App = {
   /* mot de passe oublié : Firebase envoie un e-mail avec un lien pour choisir un nouveau mot de passe */
   forgotPassword(){
     return this.busy("btn-forgot", async ()=>{
-      const email=this.normEmail(document.getElementById("fg-email").value);
-      if(!email) return this.toast(this.t("t_fill"));
-      if(!this.auth) return this.toast(this.t("err_network"));
+      const raw=(document.getElementById("fg-email").value||"").trim();
+      if(!raw) return this.toast(this.t("t_fill"));
+      if(!this.auth || !DB.db) return this.toast(this.t("err_network"));
+      let id;
+      try{ id=await this.resolveLoginId(raw); }catch(e){ return this.toast(this.authError(e)); }
+      if(id.error) return this.toast(this.t(id.error));
+      if(id.unknown) return this.toast(this.t("t_phone_unknown"));
+      const email=id.email, shown=id.viaPhone ? this.maskEmail(email) : email;
       const done=()=>{ const el=document.getElementById("forgot-sent");
-        if(el){ el.textContent=this.t("t_reset_sent")(email); el.style.display=""; } };
+        if(el){ el.textContent=this.t("t_reset_sent")(shown); el.style.display=""; } };
       try{ await this.sendReset(email); done(); }
       catch(e){
         // même message si l'e-mail est inconnu : on ne révèle pas quels e-mails ont un compte
@@ -2586,7 +2653,7 @@ const App = {
           <div class="field"><label for="au-pass">${this.t("admin_pass_label")}</label><input class="input" id="au-pass" type="text" autocomplete="new-password" />
             <span class="fhint">${this.t("password_hint")} ${this.t("add_admin_hint")}</span></div>
           <button class="btn btn-brass btn-block" id="btn-add-admin" onclick="App.addAdmin()">${this.t("add")}</button>
-        </div><div id="users-list"></div>`;
+        </div><div id="user-edit"></div><div id="users-list"></div>`;
       Object.keys(keep).forEach(i=>{ const el=document.getElementById(i); if(el) el.value=keep[i]; });
       this._usersFormLang=this.lang;
     }
@@ -2603,9 +2670,11 @@ const App = {
       const phone=u.tel||u.username||"";
       const contact=[ u.email?this.escape(u.email):(legacy?"":this.t("no_email")), phone?"📞 "+this.phoneFmt(phone):"" ].filter(Boolean).join(" · ");
       let acts="";
+      const editBtn=`<button class="btn btn-ghost btn-sm" title="${this.t("edit")}" aria-label="${this.t("edit")}" onclick="App.openUserEdit('${id}')">✏️</button>`;
       if(legacy){
-        acts=`<button class="btn btn-danger btn-sm" title="${this.t("delete")}" aria-label="${this.t("delete")}" onclick="App.deleteLegacyUser('${id}')">🗑</button>`;
+        acts=editBtn+`<button class="btn btn-danger btn-sm" title="${this.t("delete")}" aria-label="${this.t("delete")}" onclick="App.deleteLegacyUser('${id}')">🗑</button>`;
       } else {
+        acts+=editBtn;
         if(!isMe && !blocked){
           acts+= isAdm
             ? `<button class="btn btn-ghost btn-sm" onclick="App.setRole('${id}','client')" ${activeAdmins<=1?"disabled":""}>👤 ${this.t("make_client")}</button>`
@@ -2616,6 +2685,7 @@ const App = {
           acts+= blocked
             ? `<button class="btn btn-ok btn-sm" onclick="App.setBlocked('${id}',false)">${this.t("unblock")}</button>`
             : `<button class="btn btn-danger btn-sm" onclick="App.setBlocked('${id}',true)">${this.t("block")}</button>`;
+          acts+=`<button class="btn btn-danger btn-sm" title="${this.t("delete")}" aria-label="${this.t("delete")}" onclick="App.deleteUser('${id}')">🗑</button>`;
         }
       }
       return `<div class="queue-row ${blocked?"is-blocked":""}">
@@ -2625,7 +2695,7 @@ const App = {
     };
     const byName=(a,b)=>(a.role==="admin"?0:1)-(b.role==="admin"?0:1) || (a.nom||"").localeCompare(b.nom||"");
     const matches=this.legacyMatches(), matchedOld=new Set(matches.map(m=>String(m.old.id)));
-    const current=users.filter(u=>!u.legacy).sort(byName), old=users.filter(u=>u.legacy && !matchedOld.has(String(u.id))).sort(byName);
+    const current=users.filter(u=>!u.legacy && !u.deleted).sort(byName), old=users.filter(u=>u.legacy && !matchedOld.has(String(u.id))).sort(byName);
     let html="";
     if(matches.length){
       const cnt=bid=>DB.get("bookings",[]).filter(b=>String(b.userId)===bid).length;
@@ -2712,6 +2782,97 @@ const App = {
     if(!window.confirm(this.t("confirm_transfer_all")(ms.length))) return;
     let moved=0; ms.forEach(m=>{ moved+=this._transferLegacy(m.old.id, m.neu.id); });
     this.toast(this.t("t_transferred")(moved)); this.renderUsers();
+  },
+  /* ---------- modifier un compte (nouveau ou ancien) ---------- */
+  openUserEdit(id){
+    const {u}=this._userById(id); if(!u) return;
+    const w=document.getElementById("user-edit"); if(!w) return;
+    this._editId=String(u.id);
+    const legacy=!!u.legacy;
+    w.innerHTML=`<div class="card" style="margin-bottom:16px;border-color:var(--brass)">
+      <div class="tk-label" style="color:var(--brass-soft);margin-bottom:10px">${this.t("ue_title")(this.escape(u.nom||u.username||u.email||"—"))}</div>
+      <div class="field"><label for="ue-nom">${this.t("name_label")}</label><input class="input" id="ue-nom" autocomplete="off" /></div>
+      <div class="field"><label for="ue-tel">${this.t("phone_label")}</label><input class="input" id="ue-tel" type="tel" inputmode="numeric" autocomplete="off" /></div>
+      ${legacy
+        ? `<div class="field"><label for="ue-email">${this.t("email_label")}</label>
+             <input class="input" id="ue-email" type="email" inputmode="email" autocomplete="off" autocapitalize="none" placeholder="${this.t("email_ph")}" />
+             <span class="fhint">${this.t("ue_legacy_hint")}</span></div>`
+        : `<div class="field"><label>${this.t("email_label")}</label><div class="input" style="opacity:.7;overflow:hidden;text-overflow:ellipsis">${this.escape(u.email||"—")}</div>
+             <span class="fhint">${this.t("ue_email_locked")}</span></div>`}
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-brass" style="flex:1" id="btn-ue-save" onclick="App.saveUserEdit()">${legacy?this.t("ue_create"):this.t("save")}</button>
+        <button class="btn btn-ghost" onclick="App.closeUserEdit()">${this.t("cancel_btn")}</button>
+      </div></div>`;
+    document.getElementById("ue-nom").value=u.nom||"";
+    document.getElementById("ue-tel").value=u.tel||u.username||"";
+    try{ w.scrollIntoView({ behavior:"smooth", block:"start" }); }catch(e){}
+  },
+  closeUserEdit(){ this._editId=null; const w=document.getElementById("user-edit"); if(w) w.innerHTML=""; },
+  saveUserEdit(){
+    return this.busy("btn-ue-save", async ()=>{
+      const {users,u}=this._userById(this._editId); if(!u) return this.closeUserEdit();
+      const nom=document.getElementById("ue-nom").value.trim();
+      const k=this.tel8(document.getElementById("ue-tel").value);
+      if(!nom) return this.toast(this.t("t_fill"));
+      if(!k) return this.toast(this.t("err_bad_phone"));
+      if(u.legacy) return this._convertLegacy(u, nom, k);
+      try{
+        const oldK=this.tel8(u.tel);
+        if(k!==oldK){
+          const other=await DB.db.collection("phones").doc(k).get();
+          if(other.exists && (other.data()||{}).uid!==u.id) return this.toast(this.t("err_phone_other"));
+          if(oldK){
+            const o=await DB.db.collection("phones").doc(oldK).get();
+            if(o.exists && (o.data()||{}).uid===u.id) await DB.db.collection("phones").doc(oldK).delete();
+          }
+          if(u.email) await this.savePhoneIndex(k, u.id, u.email);
+        }
+        u.nom=nom; u.tel=k; DB.set("users", users);
+        this.toast(this.t("t_saved")); this.closeUserEdit(); this.renderUsers();
+      }catch(e){ this.toast(this.authError(e)); }
+    });
+  },
+  randomPass(){
+    const a=new Uint32Array(6); (window.crypto||{}).getRandomValues ? crypto.getRandomValues(a) : a.forEach((_,i)=>a[i]=Math.random()*4294967295);
+    return Array.from(a).map(x=>x.toString(36)).join("")+"A9!";
+  },
+  /* ancien compte + e-mail -> vrai compte Firebase : il choisit son mot de passe grâce à l'e-mail reçu */
+  async _convertLegacy(u, nom, k){
+    const email=this.normEmail((document.getElementById("ue-email")||{}).value);
+    if(!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return this.toast(this.t("err_invalid_email"));
+    let sec=null;
+    try{
+      const deja=DB.get("users",[]).some(x=>!x.legacy && !x.deleted && String(x.id)!==String(u.id) && this.tel8(x.tel)===k);
+      if(deja || await this.emailForPhone(k)) return this.toast(this.t("err_phone_has_account"));
+      sec=firebase.apps.find(a=>a.name==="creation-admin") || firebase.initializeApp(firebaseConfig, "creation-admin");
+      const sa=sec.auth();
+      await sa.setPersistence(firebase.auth.Auth.Persistence.NONE);
+      const cred=await sa.createUserWithEmailAndPassword(email, this.randomPass());
+      const uid=cred.user.uid;
+      await cred.user.updateProfile({displayName:nom}).catch(()=>{});
+      await sa.signOut().catch(()=>{});
+      await DB.db.collection("users").doc(uid).set({ id:uid, role:"client", nom, tel:k, email, lang:this.lang||"fr",
+        createdAt:u.createdAt||Date.now(), ancienId:String(u.id), _by:DB.uid, _at:Date.now() });
+      await this.savePhoneIndex(k, uid, email);
+      this._transferLegacy(u.id, uid);                 // réservations, fidélité, avis → nouveau compte ; ancien supprimé
+      try{ await this.sendReset(email); }catch(e){ console.warn("reset:", e); }
+      this.toast(this.t("t_account_created")(email)); this.closeUserEdit(); this.renderUsers();
+    }catch(e){
+      this.toast(e && e.code==="auth/email-already-in-use" ? this.t("err_email_has_account") : this.authError(e));
+      try{ if(sec) await sec.auth().signOut(); }catch(_){}
+    }
+  },
+  /* supprimer un compte client : bloqué tout de suite, effacé définitivement par le robot (scripts/) */
+  async deleteUser(id){
+    const {users,u}=this._userById(id); if(!u) return;
+    if(u.legacy) return this.deleteLegacyUser(id);
+    const me=this.currentUser(); if((me && me.id===u.id) || u.role==="admin") return;
+    if(!window.confirm(this.t("confirm_delete_user")(u.nom||u.email||""))) return;
+    u.disabled=true; u.deleted=true; u.deletedAt=Date.now(); DB.set("users", users);
+    const k=this.tel8(u.tel);
+    if(k){ try{ const d=await DB.db.collection("phones").doc(k).get(); if(d.exists && (d.data()||{}).uid===u.id) await DB.db.collection("phones").doc(k).delete(); }catch(e){} }
+    if(this._editId===String(u.id)) this.closeUserEdit();
+    this.toast(this.t("t_user_removed")); this.renderUsers();
   },
   deleteLegacyUser(id){
     const {u}=this._userById(id); if(!u || !u.legacy) return;
