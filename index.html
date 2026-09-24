@@ -140,6 +140,13 @@ header.topbar{display:flex;align-items:center;justify-content:space-between;gap:
 .field label{display:block;font-size:.76rem;color:var(--cream-dim);margin-bottom:6px;letter-spacing:.04em}
 .input,textarea,select{width:100%;font-family:var(--body);font-size:1rem;color:var(--cream);background:#160f0d;border:1px solid var(--line);border-radius:11px;padding:12px 14px;transition:.16s}
 .input:focus,textarea:focus,select:focus{outline:none;border-color:var(--brass);box-shadow:0 0 0 3px rgba(201,162,75,.16)}
+/* champ mot de passe avec bouton « afficher / masquer » */
+.pw-wrap{position:relative}
+.pw-wrap .input{padding-inline-end:50px}
+.pw-eye{position:absolute;inset-inline-end:5px;top:50%;transform:translateY(-50%);width:40px;height:40px;border:0;background:none;
+  color:var(--muted);cursor:pointer;border-radius:9px;display:grid;place-items:center;padding:0}
+.pw-eye:hover,.pw-eye[aria-pressed="true"]{color:var(--brass-soft)}
+.pw-eye:focus-visible{outline:2px solid var(--brass);outline-offset:1px}
 textarea{resize:vertical;min-height:80px}
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
@@ -496,7 +503,7 @@ a.val:hover{color:var(--brass-soft)}
         <div class="field"><label for="log-email" data-i18n="login_id_label">E-mail ou numéro de téléphone</label>
           <input class="input" id="log-email" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" data-i18n-ph="login_id_ph" placeholder="exemple@gmail.com ou 22 333 444" /></div>
         <div class="field"><label for="log-pass" data-i18n="password_label">Mot de passe</label>
-          <input class="input" id="log-pass" type="password" autocomplete="current-password" placeholder="••••••" onkeydown="if(event.key==='Enter') App.login()" /></div>
+          <div class="pw-wrap"><input class="input" id="log-pass" type="password" autocomplete="current-password" placeholder="••••••" onkeydown="if(event.key==='Enter') App.login()" /><button type="button" class="pw-eye" onclick="App.togglePw('log-pass',this)" aria-pressed="false" data-i18n-aria="pw_show" aria-label="Afficher le mot de passe" title="Afficher le mot de passe"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
         <button class="btn btn-primary btn-block" id="btn-login" onclick="App.login()" data-i18n="btn_login">Se connecter</button>
         <button type="button" class="auth-link" onclick="App.switchAuth('forgot')" data-i18n="forgot_link">Mot de passe oublié ?</button>
         <button type="button" class="auth-link" style="margin-top:4px" onclick="App.oldAccount()" data-i18n="old_account_link">📱 Vous aviez un compte avec votre numéro de téléphone ?</button>
@@ -524,7 +531,7 @@ a.val:hover{color:var(--brass-soft)}
           <input class="input" id="reg-email" type="email" inputmode="email" autocomplete="email" data-i18n-ph="email_ph" placeholder="exemple@gmail.com" />
           <span class="fhint" data-i18n="email_hint">Sert à récupérer votre mot de passe.</span></div>
         <div class="field"><label for="reg-pass" data-i18n="password_label">Mot de passe</label>
-          <input class="input" id="reg-pass" type="password" autocomplete="new-password" placeholder="••••••" onkeydown="if(event.key==='Enter') App.register()" />
+          <div class="pw-wrap"><input class="input" id="reg-pass" type="password" autocomplete="new-password" placeholder="••••••" onkeydown="if(event.key==='Enter') App.register()" /><button type="button" class="pw-eye" onclick="App.togglePw('reg-pass',this)" aria-pressed="false" data-i18n-aria="pw_show" aria-label="Afficher le mot de passe" title="Afficher le mot de passe"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
           <span class="fhint" data-i18n="password_hint">6 caractères minimum.</span></div>
         <button class="btn btn-primary btn-block" id="btn-register" onclick="App.register()" data-i18n="btn_register">Créer mon compte</button>
       </div>
@@ -583,6 +590,15 @@ a.val:hover{color:var(--brass-soft)}
 
     <div class="screen-tab pad" id="tab-about-client">
       <div id="about-client"></div>
+      <div class="card mt" id="client-account">
+        <div class="tk-label" style="color:var(--brass-soft);margin-bottom:10px" data-i18n="my_pw_title">🔑 Changer mon mot de passe</div>
+        <div class="field"><label for="my-pass-old" data-i18n="pw_old">Mot de passe actuel</label>
+          <div class="pw-wrap"><input class="input" id="my-pass-old" type="password" autocomplete="current-password" /><button type="button" class="pw-eye" onclick="App.togglePw('my-pass-old',this)" aria-pressed="false" data-i18n-aria="pw_show" aria-label="Afficher le mot de passe" title="Afficher le mot de passe"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+        <div class="field"><label for="my-pass-new" data-i18n="pw_new">Nouveau mot de passe</label>
+          <div class="pw-wrap"><input class="input" id="my-pass-new" type="password" autocomplete="new-password" /><button type="button" class="pw-eye" onclick="App.togglePw('my-pass-new',this)" aria-pressed="false" data-i18n-aria="pw_show" aria-label="Afficher le mot de passe" title="Afficher le mot de passe"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+          <span class="fhint" data-i18n="password_hint">6 caractères minimum.</span></div>
+        <button class="btn btn-ghost btn-block" id="btn-my-pw" onclick="App.changeMyPassword('my')" data-i18n="pw_change_btn">Changer le mot de passe</button>
+      </div>
     </div>
   </section>
 
@@ -850,7 +866,7 @@ const I18N = {
     svc_desc_fr:"Description (FR)", svc_desc_ar:"Description (AR)", new_service:"Nouvelle prestation", edit_service:"Modifier la prestation",
     confirm_del_user:"Supprimer cet utilisateur ?", confirm_del_svc:"Supprimer cette prestation ?", confirm_del_review:"Supprimer cet avis ?",
     new_password:"Nouveau mot de passe :", no_clients:"Aucun utilisateur",
-    t_registered:"Compte créé, bienvenue !", t_login_ok:"Connexion réussie", t_bad_login:"E-mail ou mot de passe incorrect.",
+    t_registered:"Compte créé, bienvenue !", t_login_ok:"Connexion réussie", t_bad_login:"E-mail / numéro ou mot de passe incorrect.",
     t_fill:"Remplissez tous les champs.", t_id_taken:"Cet identifiant est déjà pris.",
     t_booked:"Place réservée ! Suivez votre tour.", t_already:"Vous avez déjà une réservation en cours.",
     t_validated:"Client validé.", t_started:"Service démarré.", t_finished:"Service terminé et encaissé.",
@@ -1017,6 +1033,16 @@ const I18N = {
     t_account_created:(e)=>"Compte créé ✓ Un e-mail a été envoyé à "+e+" pour choisir son mot de passe.",
     confirm_delete_user:(n)=>"Supprimer définitivement le compte de « "+n+" » ?\nIl ne pourra plus se connecter. L'historique de la caisse est conservé.",
     t_user_removed:"Compte supprimé ✓",
+    pw_show:"Afficher le mot de passe", pw_hide:"Masquer le mot de passe",
+    my_pw_title:"🔑 Changer mon mot de passe", pw_old:"Mot de passe actuel", pw_new:"Nouveau mot de passe",
+    pw_change_btn:"Changer le mot de passe", t_pw_changed:"Mot de passe changé ✓", err_old_pass:"Mot de passe actuel incorrect.",
+    client_pw_title:"🔑 Nouveau mot de passe pour ce client",
+    client_pw_hint:"Pour un client qui n'a plus accès à son e-mail : donnez-lui ce mot de passe, il pourra le changer ensuite (onglet « À propos »). Actif en 15 min max (tout de suite avec les Cloud Functions ou Actions → Run workflow). Sinon, 🔑 lui envoie un e-mail.",
+    client_pw_btn:"Définir ce mot de passe", t_pw_set:(n)=>"Mot de passe de « "+n+" » enregistré ✓ Il sera actif dans 15 min max.",
+    admin_pw_hint:"Pour un autre administrateur : utilisez 🔑 pour lui envoyer un e-mail de réinitialisation.",
+    legacy_pw_label:"Mot de passe provisoire (optionnel)",
+    legacy_pw_hint:"Rempli : le client se connecte tout de suite avec ce mot de passe. Vide : il reçoit un e-mail pour choisir le sien.",
+    t_account_created_pw:"Compte créé ✓ Il peut se connecter tout de suite avec ce mot de passe.",
     confirm_del_legacy:"Supprimer cet ancien compte ? L'historique des prestations est conservé.",
     /* --- notifications push --- */
     notif_test:"Envoyer une notification de test", t_test_sent:"Test demandé ✓ La notification arrive en quelques secondes (Cloud Functions) ou au prochain passage du robot (15 min max).",
@@ -1063,7 +1089,7 @@ const I18N = {
     svc_desc_fr:"الوصف (FR)", svc_desc_ar:"الوصف (AR)", new_service:"خدمة جديدة", edit_service:"تعديل الخدمة",
     confirm_del_user:"حذف هذا المستخدم؟", confirm_del_svc:"حذف هذه الخدمة؟", confirm_del_review:"حذف هذا التقييم؟",
     new_password:"كلمة السر الجديدة:", no_clients:"لا يوجد مستخدمون",
-    t_registered:"تم إنشاء الحساب، مرحباً!", t_login_ok:"تم الدخول بنجاح", t_bad_login:"البريد الإلكتروني أو كلمة السر غير صحيحة.",
+    t_registered:"تم إنشاء الحساب، مرحباً!", t_login_ok:"تم الدخول بنجاح", t_bad_login:"البريد الإلكتروني / الرقم أو كلمة السر غير صحيحة.",
     t_fill:"املأ كل الحقول.", t_id_taken:"هذا المعرّف مستعمل مسبقاً.",
     t_booked:"تم الحجز! تابع دورك.", t_already:"لديك حجز جارٍ بالفعل.",
     t_validated:"تمت الموافقة على الزبون.", t_started:"بدأت الخدمة.", t_finished:"انتهت الخدمة وتم التحصيل.",
@@ -1230,6 +1256,16 @@ const I18N = {
     t_account_created:(e)=>"تم إنشاء الحساب ✓ أُرسلت رسالة إلى "+e+" لاختيار كلمة السر.",
     confirm_delete_user:(n)=>"حذف حساب « "+n+" » نهائيًا؟\nلن يتمكن من الدخول. يبقى سجل الصندوق محفوظًا.",
     t_user_removed:"تم حذف الحساب ✓",
+    pw_show:"إظهار كلمة السر", pw_hide:"إخفاء كلمة السر",
+    my_pw_title:"🔑 تغيير كلمة السر", pw_old:"كلمة السر الحالية", pw_new:"كلمة السر الجديدة",
+    pw_change_btn:"تغيير كلمة السر", t_pw_changed:"تم تغيير كلمة السر ✓", err_old_pass:"كلمة السر الحالية غير صحيحة.",
+    client_pw_title:"🔑 كلمة سر جديدة لهذا الزبون",
+    client_pw_hint:"لزبون لم يعد يصل إلى بريده: أعطه كلمة السر هذه، ويمكنه تغييرها بعد ذلك (تبويب «حول»). تُفعَّل خلال 15 دقيقة كحد أقصى (فورًا مع Cloud Functions أو Actions → Run workflow). أو استعمل 🔑 لإرسال رسالة إليه.",
+    client_pw_btn:"تعيين كلمة السر", t_pw_set:(n)=>"تم حفظ كلمة سر « "+n+" » ✓ ستُفعَّل خلال 15 دقيقة كحد أقصى.",
+    admin_pw_hint:"لمسؤول آخر: استعمل 🔑 لإرسال رسالة إعادة تعيين إليه.",
+    legacy_pw_label:"كلمة سر مؤقتة (اختياري)",
+    legacy_pw_hint:"إن ملأتها: يدخل الزبون فورًا بهذه الكلمة. إن تركتها فارغة: تصله رسالة ليختار كلمته.",
+    t_account_created_pw:"تم إنشاء الحساب ✓ يمكنه الدخول فورًا بكلمة السر هذه.",
     confirm_del_legacy:"حذف هذا الحساب القديم؟ يبقى سجل الخدمات محفوظًا.",
     /* --- الإشعارات --- */
     notif_test:"إرسال إشعار تجريبي", t_test_sent:"تم طلب التجربة ✓ يصل الإشعار خلال ثوانٍ (Cloud Functions) أو عند المرور القادم للروبوت (15 دقيقة كحد أقصى).",
@@ -1409,6 +1445,7 @@ const App = {
     document.documentElement.dir = this.lang==="ar"?"rtl":"ltr";
     document.querySelectorAll("[data-i18n]").forEach(el=>{ const v=this.t(el.dataset.i18n); if(typeof v==="string") el.textContent=v; });
     document.querySelectorAll("[data-i18n-ph]").forEach(el=>{ const v=this.t(el.dataset.i18nPh); if(typeof v==="string") el.placeholder=v; });
+    document.querySelectorAll("[data-i18n-aria]").forEach(el=>{ const v=this.t(el.dataset.i18nAria); if(typeof v==="string"){ el.setAttribute("aria-label",v); el.title=v; } });
     this.syncLangToggles(); this.renderAll(); this.updateInstallText();
     const u=this.currentUser();
     if(u){ const hi=this.lang==="ar"?"مرحبا، ":"Bonjour, ";
@@ -1439,6 +1476,7 @@ const App = {
   /* ---------- authentification (Firebase Authentication) ---------- */
   switchAuth(mode){
     this.authMode=mode;
+    this.hidePasswords();
     const tab = mode==="forgot" ? "login" : mode;
     document.querySelectorAll("#auth-tabs button").forEach(b=>b.classList.toggle("on", b.dataset.auth===tab));
     document.getElementById("form-login").style.display    = mode==="login"?"":"none";
@@ -1503,6 +1541,41 @@ const App = {
       const d=await DB.db.collection("phones").doc(k).get();
       if(!d.exists || ((d.data()||{}).uid===u.uid && (d.data()||{}).email!==u.email)) await this.savePhoneIndex(k, u.uid, u.email);
     }catch(e){ console.warn("phones:", e); }
+  },
+  EYE:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  EYE_OFF:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
+  eyeBtn(id){ return `<button type="button" class="pw-eye" onclick="App.togglePw('${id}',this)" aria-pressed="false" data-i18n-aria="pw_show" aria-label="${this.t("pw_show")}" title="${this.t("pw_show")}">${this.EYE}</button>`; },
+  /* afficher / masquer le mot de passe tapé */
+  togglePw(id, btn){
+    const el=document.getElementById(id); if(!el) return;
+    const show = el.type==="password";
+    el.type = show ? "text" : "password";
+    if(btn){
+      btn.setAttribute("aria-pressed", show?"true":"false");
+      btn.innerHTML = show ? this.EYE_OFF : this.EYE;
+      const k = show ? "pw_hide" : "pw_show"; btn.dataset.i18nAria=k;
+      const v=this.t(k); btn.setAttribute("aria-label", v); btn.title=v;
+    }
+  },
+  hidePasswords(){ document.querySelectorAll(".pw-wrap input").forEach(el=>{ if(el.type==="text") this.togglePw(el.id, el.parentNode.querySelector(".pw-eye")); }); },
+  /* changer SON mot de passe (admin ou client) : on vérifie d'abord l'actuel */
+  changeMyPassword(prefix){
+    return this.busy("btn-"+prefix+"-pw", async ()=>{
+      const o=document.getElementById(prefix+"-pass-old"), n=document.getElementById(prefix+"-pass-new");
+      const user=this.auth && this.auth.currentUser; if(!o || !n || !user) return;
+      if(!o.value || !n.value) return this.toast(this.t("t_fill"));
+      if(n.value.length<6) return this.toast(this.t("err_weak_pass"));
+      try{
+        const cred=firebase.auth.EmailAuthProvider.credential(user.email, o.value);
+        await user.reauthenticateWithCredential(cred);
+        await user.updatePassword(n.value);
+        o.value=""; n.value=""; this.hidePasswords();
+        this.toast(this.t("t_pw_changed"));
+      }catch(e){
+        const c=(e&&e.code)||"";
+        this.toast(["auth/wrong-password","auth/invalid-credential","auth/invalid-login-credentials"].includes(c) ? this.t("err_old_pass") : this.authError(e));
+      }
+    });
   },
   maskEmail(e){ const [a,b]=String(e||"").split("@"); if(!b) return e; return a.slice(0,2)+"***@"+b; },
   /* identifiant tapé : e-mail OU numéro de téléphone */
@@ -2788,7 +2861,29 @@ const App = {
     const {u}=this._userById(id); if(!u) return;
     const w=document.getElementById("user-edit"); if(!w) return;
     this._editId=String(u.id);
-    const legacy=!!u.legacy;
+    const legacy=!!u.legacy, me=this.currentUser(), isMe=!!(me && String(me.id)===String(u.id));
+    let pwHTML="";
+    if(legacy){
+      pwHTML=`<div class="field"><label for="ue-pass-new">${this.t("legacy_pw_label")}</label>
+          <div class="pw-wrap"><input class="input" id="ue-pass-new" type="password" autocomplete="new-password" />${this.eyeBtn("ue-pass-new")}</div>
+          <span class="fhint">${this.t("legacy_pw_hint")}</span></div>`;
+    } else if(isMe){
+      pwHTML=`<div class="tk-label" style="color:var(--brass-soft);margin:18px 0 10px">${this.t("my_pw_title")}</div>
+        <div class="field"><label for="ue-pass-old">${this.t("pw_old")}</label>
+          <div class="pw-wrap"><input class="input" id="ue-pass-old" type="password" autocomplete="current-password" />${this.eyeBtn("ue-pass-old")}</div></div>
+        <div class="field"><label for="ue-pass-new">${this.t("pw_new")}</label>
+          <div class="pw-wrap"><input class="input" id="ue-pass-new" type="password" autocomplete="new-password" />${this.eyeBtn("ue-pass-new")}</div>
+          <span class="fhint">${this.t("password_hint")}</span></div>
+        <button class="btn btn-ghost btn-block" id="btn-ue-pw" onclick="App.changeMyPassword('ue')">${this.t("pw_change_btn")}</button>`;
+    } else if(u.role!=="admin"){
+      pwHTML=`<div class="tk-label" style="color:var(--brass-soft);margin:18px 0 10px">${this.t("client_pw_title")}</div>
+        <div class="field"><label for="ue-pass-new">${this.t("pw_new")}</label>
+          <div class="pw-wrap"><input class="input" id="ue-pass-new" type="text" autocomplete="off" />${this.eyeBtn("ue-pass-new")}</div>
+          <span class="fhint">${this.t("client_pw_hint")}</span></div>
+        <button class="btn btn-ghost btn-block" id="btn-ue-setpw" onclick="App.setClientPassword()">${this.t("client_pw_btn")}</button>`;
+    } else {
+      pwHTML=`<p class="hint" style="margin:14px 0 0">${this.t("admin_pw_hint")}</p>`;
+    }
     w.innerHTML=`<div class="card" style="margin-bottom:16px;border-color:var(--brass)">
       <div class="tk-label" style="color:var(--brass-soft);margin-bottom:10px">${this.t("ue_title")(this.escape(u.nom||u.username||u.email||"—"))}</div>
       <div class="field"><label for="ue-nom">${this.t("name_label")}</label><input class="input" id="ue-nom" autocomplete="off" /></div>
@@ -2802,7 +2897,11 @@ const App = {
       <div style="display:flex;gap:8px">
         <button class="btn btn-brass" style="flex:1" id="btn-ue-save" onclick="App.saveUserEdit()">${legacy?this.t("ue_create"):this.t("save")}</button>
         <button class="btn btn-ghost" onclick="App.closeUserEdit()">${this.t("cancel_btn")}</button>
-      </div></div>`;
+      </div>${legacy?"":pwHTML}</div>`;
+    if(legacy){ const f=document.getElementById("ue-email"); if(f && f.parentNode) f.parentNode.insertAdjacentHTML("afterend", pwHTML); }
+    /* mot de passe défini par l'admin pour un client : visible par défaut (à lui communiquer) */
+    const np=document.getElementById("ue-pass-new");
+    if(np && !legacy && !isMe && u.role!=="admin"){ const b=np.parentNode.querySelector(".pw-eye"); if(b){ np.type="password"; this.togglePw("ue-pass-new", b); } }
     document.getElementById("ue-nom").value=u.nom||"";
     document.getElementById("ue-tel").value=u.tel||u.username||"";
     try{ w.scrollIntoView({ behavior:"smooth", block:"start" }); }catch(e){}
@@ -2832,6 +2931,19 @@ const App = {
       }catch(e){ this.toast(this.authError(e)); }
     });
   },
+  setClientPassword(){
+    return this.busy("btn-ue-setpw", async ()=>{
+      const {u}=this._userById(this._editId);
+      if(!u || u.legacy || u.role==="admin" || u.deleted) return;
+      const el=document.getElementById("ue-pass-new"); const p=(el&&el.value)||"";
+      if(p.length<6) return this.toast(this.t("err_weak_pass"));
+      try{
+        await DB.db.collection("motsDePasse").doc(String(u.id)).set({ uid:String(u.id), pass:p, by:DB.uid, at:Date.now() });
+        el.value="";
+        this.toast(this.t("t_pw_set")(u.nom||u.email||""));
+      }catch(e){ this.toast(this.authError(e)); }
+    });
+  },
   randomPass(){
     const a=new Uint32Array(6); (window.crypto||{}).getRandomValues ? crypto.getRandomValues(a) : a.forEach((_,i)=>a[i]=Math.random()*4294967295);
     return Array.from(a).map(x=>x.toString(36)).join("")+"A9!";
@@ -2847,7 +2959,9 @@ const App = {
       sec=firebase.apps.find(a=>a.name==="creation-admin") || firebase.initializeApp(firebaseConfig, "creation-admin");
       const sa=sec.auth();
       await sa.setPersistence(firebase.auth.Auth.Persistence.NONE);
-      const cred=await sa.createUserWithEmailAndPassword(email, this.randomPass());
+      const provisoire=((document.getElementById("ue-pass-new")||{}).value)||"";
+      if(provisoire && provisoire.length<6){ try{ await sa.signOut(); }catch(_){} return this.toast(this.t("err_weak_pass")); }
+      const cred=await sa.createUserWithEmailAndPassword(email, provisoire || this.randomPass());
       const uid=cred.user.uid;
       await cred.user.updateProfile({displayName:nom}).catch(()=>{});
       await sa.signOut().catch(()=>{});
@@ -2855,8 +2969,9 @@ const App = {
         createdAt:u.createdAt||Date.now(), ancienId:String(u.id), _by:DB.uid, _at:Date.now() });
       await this.savePhoneIndex(k, uid, email);
       this._transferLegacy(u.id, uid);                 // réservations, fidélité, avis → nouveau compte ; ancien supprimé
-      try{ await this.sendReset(email); }catch(e){ console.warn("reset:", e); }
-      this.toast(this.t("t_account_created")(email)); this.closeUserEdit(); this.renderUsers();
+      if(provisoire) this.toast(this.t("t_account_created_pw"));
+      else { try{ await this.sendReset(email); }catch(e){ console.warn("reset:", e); } this.toast(this.t("t_account_created")(email)); }
+      this.closeUserEdit(); this.renderUsers();
     }catch(e){
       this.toast(e && e.code==="auth/email-already-in-use" ? this.t("err_email_has_account") : this.authError(e));
       try{ if(sec) await sec.auth().signOut(); }catch(_){}
