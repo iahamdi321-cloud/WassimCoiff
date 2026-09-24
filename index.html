@@ -499,6 +499,7 @@ a.val:hover{color:var(--brass-soft)}
           <input class="input" id="log-pass" type="password" autocomplete="current-password" placeholder="••••••" onkeydown="if(event.key==='Enter') App.login()" /></div>
         <button class="btn btn-primary btn-block" id="btn-login" onclick="App.login()" data-i18n="btn_login">Se connecter</button>
         <button type="button" class="auth-link" onclick="App.switchAuth('forgot')" data-i18n="forgot_link">Mot de passe oublié ?</button>
+        <button type="button" class="auth-link" style="margin-top:4px" onclick="App.oldAccount()" data-i18n="old_account_link">📱 Vous aviez un compte avec votre numéro de téléphone ?</button>
       </div>
 
       <!-- Mot de passe oublié : envoi d'un e-mail de réinitialisation -->
@@ -514,6 +515,7 @@ a.val:hover{color:var(--brass-soft)}
 
       <!-- Inscription -->
       <div class="card" id="form-register" style="display:none">
+        <div class="auth-sent" id="reg-old-note" role="status" style="display:none;margin-bottom:14px" data-i18n="old_account_note"></div>
         <div class="field"><label for="reg-name" data-i18n="name_label">Nom complet</label>
           <input class="input" id="reg-name" autocomplete="name" data-i18n-ph="name_ph" placeholder="Ex : Wassim" /></div>
         <div class="field"><label for="reg-phone" data-i18n="phone_label">Numéro de téléphone</label>
@@ -990,7 +992,16 @@ const I18N = {
     block:"Bloquer", unblock:"Débloquer", confirm_block:(n)=>"Bloquer le compte de "+n+" ? Il ne pourra plus utiliser l'application.",
     t_blocked_ok:"Compte bloqué.", t_unblocked_ok:"Compte débloqué.",
     badge_blocked:"Bloqué", badge_legacy:"Ancien compte", no_email:"sans e-mail",
-    legacy_hint:"Anciens comptes (connexion par téléphone) : ils ne peuvent plus se connecter. Le client doit créer un nouveau compte avec son e-mail. L'historique des prestations est conservé.",
+    legacy_hint:"Anciens comptes (connexion par téléphone) : ils ne peuvent plus se connecter. Le client crée un nouveau compte avec son e-mail et le MÊME numéro : il apparaît alors en haut de cette page pour transférer son historique.",
+    old_account_link:"📱 Vous aviez un compte avec votre numéro de téléphone ?",
+    old_account_note:"Nouvelle version : on se connecte maintenant avec son e-mail (pour pouvoir récupérer son mot de passe). Créez votre compte ci-dessous avec le MÊME numéro de téléphone : le salon récupérera votre historique et vos points fidélité.",
+    t_phone_login:"La connexion par numéro est terminée : créez votre nouveau compte avec votre e-mail et le même numéro.",
+    legacy_found_title:"Anciens clients retrouvés", legacy_found_hint:"Ils se sont réinscrits avec le même numéro. Transférez leur historique (prestations, fidélité, avis) vers leur nouveau compte.",
+    legacy_transfer:"🔗 Transférer", legacy_transfer_all:(n)=>"🔗 Tout transférer ("+n+")",
+    legacy_new_account:"Nouveau compte",
+    confirm_transfer:(a,b,n)=>"Transférer l'historique de « "+a+" » ("+n+" réservation(s)) vers le compte « "+b+" » ?\nL'ancien compte sera supprimé.",
+    confirm_transfer_all:(n)=>"Transférer l'historique des "+n+" anciens comptes retrouvés vers les nouveaux comptes ?",
+    t_transferred:(n)=>"Historique transféré ✓ ("+n+" réservation(s))",
     confirm_del_legacy:"Supprimer cet ancien compte ? L'historique des prestations est conservé.",
     /* --- notifications push --- */
     notif_test:"Envoyer une notification de test", t_test_sent:"Test demandé ✓ La notification arrive en quelques secondes (Cloud Functions) ou au prochain passage du robot (15 min max).",
@@ -1179,7 +1190,16 @@ const I18N = {
     block:"حظر", unblock:"إلغاء الحظر", confirm_block:(n)=>"حظر حساب "+n+"؟ لن يتمكن من استعمال التطبيق.",
     t_blocked_ok:"تم حظر الحساب.", t_unblocked_ok:"تم إلغاء حظر الحساب.",
     badge_blocked:"محظور", badge_legacy:"حساب قديم", no_email:"بدون بريد",
-    legacy_hint:"حسابات قديمة (الدخول بالهاتف): لم يعد بإمكانها الدخول. على الزبون إنشاء حساب جديد ببريده الإلكتروني. يبقى سجل الخدمات محفوظًا.",
+    legacy_hint:"حسابات قديمة (الدخول بالهاتف): لم يعد بإمكانها الدخول. ينشئ الزبون حسابًا جديدًا ببريده الإلكتروني وبنفس الرقم، فيظهر في أعلى هذه الصفحة لنقل سجله.",
+    old_account_link:"📱 كان لديك حساب برقم الهاتف؟",
+    old_account_note:"نسخة جديدة: أصبح الدخول بالبريد الإلكتروني (لاسترجاع كلمة السر عند الحاجة). أنشئ حسابك أدناه بنفس رقم الهاتف: سيسترجع الصالون سجلك ونقاط الوفاء.",
+    t_phone_login:"انتهى الدخول برقم الهاتف: أنشئ حسابك الجديد ببريدك الإلكتروني وبنفس الرقم.",
+    legacy_found_title:"زبائن قدامى تم العثور عليهم", legacy_found_hint:"أعادوا التسجيل بنفس الرقم. انقل سجلهم (الخدمات، الوفاء، الآراء) إلى حسابهم الجديد.",
+    legacy_transfer:"🔗 نقل", legacy_transfer_all:(n)=>"🔗 نقل الكل ("+n+")",
+    legacy_new_account:"الحساب الجديد",
+    confirm_transfer:(a,b,n)=>"نقل سجل « "+a+" » ("+n+" حجز) إلى الحساب « "+b+" »؟\nسيُحذف الحساب القديم.",
+    confirm_transfer_all:(n)=>"نقل سجل "+n+" حسابات قديمة إلى الحسابات الجديدة؟",
+    t_transferred:(n)=>"تم نقل السجل ✓ ("+n+" حجز)",
     confirm_del_legacy:"حذف هذا الحساب القديم؟ يبقى سجل الخدمات محفوظًا.",
     /* --- الإشعارات --- */
     notif_test:"إرسال إشعار تجريبي", t_test_sent:"تم طلب التجربة ✓ يصل الإشعار خلال ثوانٍ (Cloud Functions) أو عند المرور القادم للروبوت (15 دقيقة كحد أقصى).",
@@ -1393,6 +1413,9 @@ const App = {
     document.getElementById("form-login").style.display    = mode==="login"?"":"none";
     document.getElementById("form-register").style.display = mode==="register"?"":"none";
     document.getElementById("form-forgot").style.display   = mode==="forgot"?"":"none";
+    const oldNote=document.getElementById("reg-old-note");
+    if(oldNote) oldNote.style.display = (mode==="register" && this._oldNote) ? "" : "none";
+    this._oldNote=false;
     if(mode==="forgot"){
       const le=document.getElementById("log-email"), fe=document.getElementById("fg-email");
       if(fe && le && !fe.value) fe.value=le.value.trim();
@@ -1401,6 +1424,16 @@ const App = {
     }
   },
   normPhone(s){ return (s||"").replace(/\s+/g,"").trim(); },
+  /* 8 derniers chiffres d'un numéro tunisien (sans +216 / 00216, espaces, tirets) */
+  tel8(p){ let d=String(p||"").replace(/\D/g,""); if(d.startsWith("00216")) d=d.slice(5); else if(d.startsWith("216") && d.length>8) d=d.slice(3); return d.length>=8 ? d.slice(-8) : ""; },
+  /* ancien client (connexion par téléphone) : on l'amène à l'inscription, numéro pré-rempli */
+  oldAccount(){
+    const raw=(document.getElementById("log-email").value||"").trim();
+    this._oldNote=true; this.switchAuth("register");
+    const rp=document.getElementById("reg-phone");
+    if(rp && !rp.value && !raw.includes("@") && this.tel8(raw)) rp.value=raw;
+    setTimeout(()=>{ const n=document.getElementById("reg-name"); if(n) n.focus(); },30);
+  },
   normEmail(s){ return (s||"").trim().toLowerCase(); },
   /* traduit les codes d'erreur Firebase en messages clairs */
   authError(e){
@@ -1426,7 +1459,9 @@ const App = {
 
   login(){
     return this.busy("btn-login", async ()=>{
-      const email=this.normEmail(document.getElementById("log-email").value);
+      const raw=(document.getElementById("log-email").value||"").trim();
+      if(raw && !raw.includes("@") && this.tel8(raw)){ this.oldAccount(); return this.toast(this.t("t_phone_login")); }
+      const email=this.normEmail(raw);
       const pass=document.getElementById("log-pass").value;
       if(!email||!pass) return this.toast(this.t("t_fill"));
       if(!this.auth) return this.toast(this.t("err_network"));
@@ -2589,8 +2624,27 @@ const App = {
         <div class="acts">${acts}</div></div>`;
     };
     const byName=(a,b)=>(a.role==="admin"?0:1)-(b.role==="admin"?0:1) || (a.nom||"").localeCompare(b.nom||"");
-    const current=users.filter(u=>!u.legacy).sort(byName), old=users.filter(u=>u.legacy).sort(byName);
-    let html = current.length ? current.map(rowHTML).join("") : `<div class="card empty"><div class="ic">👥</div><div>${this.t("no_clients")}</div></div>`;
+    const matches=this.legacyMatches(), matchedOld=new Set(matches.map(m=>String(m.old.id)));
+    const current=users.filter(u=>!u.legacy).sort(byName), old=users.filter(u=>u.legacy && !matchedOld.has(String(u.id))).sort(byName);
+    let html="";
+    if(matches.length){
+      const cnt=bid=>DB.get("bookings",[]).filter(b=>String(b.userId)===bid).length;
+      html+=`<div class="section-head"><h2 style="font-size:1.05rem">🔗 ${this.t("legacy_found_title")} (${matches.length})</h2></div>
+        <p class="hint" style="margin-bottom:12px">${this.t("legacy_found_hint")}</p>`;
+      if(matches.length>1) html+=`<button class="btn btn-brass btn-block" style="margin-bottom:12px" onclick="App.mergeAllLegacy()">${this.t("legacy_transfer_all")(matches.length)}</button>`;
+      html+=matches.map(m=>{
+        const oid=String(m.old.id).replace(/[^\w-]/g,""), nid=String(m.neu.id).replace(/[^\w-]/g,"");
+        const oname=this.escape(m.old.nom||m.old.username||"—"), nname=this.escape(m.neu.nom||"—");
+        const tel=this.phoneFmt(m.old.tel||m.old.username||""), n=cnt(String(m.old.id));
+        return `<div class="queue-row">
+          <div class="pos">🔗</div>
+          <div><div class="who">${oname} <span class="badge badge-legacy">${this.t("badge_legacy")}</span></div>
+            <div class="sub">📞 ${tel} · ${n} ✂️<br>→ ${this.t("legacy_new_account")} : <b>${nname}</b>${m.neu.email?" · "+this.escape(m.neu.email):""}</div></div>
+          <div class="acts"><button class="btn btn-ok btn-sm" onclick="App.mergeLegacy('${oid}','${nid}')">${this.t("legacy_transfer")}</button></div></div>`;
+      }).join("");
+      html+=`<div class="section-head mt"><h2 style="font-size:1.05rem">${this.t("users_title")}</h2></div>`;
+    }
+    html += current.length ? current.map(rowHTML).join("") : `<div class="card empty"><div class="ic">👥</div><div>${this.t("no_clients")}</div></div>`;
     if(old.length){
       html+=`<div class="section-head mt"><h2 style="font-size:1.05rem">${this.t("badge_legacy")} (${old.length})</h2></div>
         <p class="hint" style="margin-bottom:12px">${this.t("legacy_hint")}</p>`+old.map(rowHTML).join("");
@@ -2620,6 +2674,44 @@ const App = {
     if(!window.confirm(this.t("confirm_send_reset")(u.email))) return;
     try{ await this.sendReset(u.email); this.toast(this.t("t_reset_sent_admin")); }
     catch(e){ this.toast(this.authError(e)); }
+  },
+  /* anciens comptes (téléphone) dont le client s'est réinscrit avec le même numéro */
+  legacyMatches(){
+    const users=DB.get("users",[]);
+    const byTel={};
+    users.filter(u=>!u.legacy && u.role!=="admin" && !u.disabled).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0))
+      .forEach(u=>{ const k=this.tel8(u.tel); if(k && !byTel[k]) byTel[k]=u; });
+    const out=[];
+    users.filter(u=>u.legacy).forEach(o=>{ const k=this.tel8(o.tel||o.username); if(k && byTel[k]) out.push({ old:o, neu:byTel[k] }); });
+    return out;
+  },
+  /* transfère réservations (fidélité comprise) et avis de l'ancien compte vers le nouveau, puis supprime l'ancien */
+  _transferLegacy(oldId, newId){
+    const o=String(oldId), nw=String(newId);
+    const bs=DB.get("bookings",[]); let n=0;
+    bs.forEach(b=>{ if(String(b.userId)===o){ b.userId=nw; n++; } });
+    if(n) DB.set("bookings",bs);
+    const av=DB.get("avis",[]); let k=0;
+    av.forEach(a=>{ if(String(a.userId)===o){ a.userId=nw; k++; } });
+    if(k) DB.set("avis",av);
+    const users=DB.get("users",[]); const nu=users.find(u=>String(u.id)===nw);
+    if(nu && !nu.ancienId){ nu.ancienId=o; DB.set("users",users); }
+    DB.del("users", o);
+    return n;
+  },
+  mergeLegacy(oldId, newId){
+    const m=this.legacyMatches().find(x=>String(x.old.id)===String(oldId) && String(x.neu.id)===String(newId));
+    if(!m) return;
+    const n=DB.get("bookings",[]).filter(b=>String(b.userId)===String(oldId)).length;
+    if(!window.confirm(this.t("confirm_transfer")(m.old.nom||m.old.username||"", m.neu.nom||m.neu.email||"", n))) return;
+    const moved=this._transferLegacy(oldId, newId);
+    this.toast(this.t("t_transferred")(moved)); this.renderUsers();
+  },
+  mergeAllLegacy(){
+    const ms=this.legacyMatches(); if(!ms.length) return;
+    if(!window.confirm(this.t("confirm_transfer_all")(ms.length))) return;
+    let moved=0; ms.forEach(m=>{ moved+=this._transferLegacy(m.old.id, m.neu.id); });
+    this.toast(this.t("t_transferred")(moved)); this.renderUsers();
   },
   deleteLegacyUser(id){
     const {u}=this._userById(id); if(!u || !u.legacy) return;
