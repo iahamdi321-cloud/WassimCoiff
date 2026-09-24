@@ -102,6 +102,22 @@ service cloud.firestore {
     match /fcmTokens/{id} { allow read, write: if isAdmin(); }    // téléphones qui reçoivent les alertes
     match /pushTests/{id} { allow create, read, delete: if isAdmin(); }
 
+    // ---------- Téléphones des clients (rappels avant rendez-vous) ----------
+    // Un document par (compte, appareil) : id = "<uid>_<appareil>". Un client ne gère que les siens.
+    function ownsToken(id) { return signedIn() && id.split('_')[0] == request.auth.uid; }
+    match /pushTokens/{id} {
+      allow read: if isAdmin() || ownsToken(id);
+      allow create, update: if isActive() && ownsToken(id)
+        && id.matches('[A-Za-z0-9]+_[A-Za-z0-9]{8,40}')
+        && request.resource.data.keys().hasOnly(['id','token','userId','lang','updatedAt'])
+        && request.resource.data.id == id
+        && request.resource.data.userId == request.auth.uid
+        && str(request.resource.data.token, 4096)
+        && request.resource.data.lang in ['fr','ar'];
+      allow delete: if isAdmin() || ownsToken(id);
+    }
+    // pushLog (anti-doublon des rappels) : utilisé seulement par le robot GitHub (clé de service).
+
     // Tout le reste est interdit par défaut.
   }
 }

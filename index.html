@@ -31,8 +31,10 @@
                  mot de passe oublié par e-mail)
   Rôles        : users/{uid}.role = "admin" ou "client"
                  (le 1er admin se crée dans la console Firebase)
-  Notifications: Firebase Cloud Messaging, envoyées par les Cloud Functions
-                 (dossier functions/, à chaque action d'un client)
+  Notifications: Firebase Cloud Messaging
+                 - admin  : à chaque action d'un client (Cloud Functions, dossier functions/)
+                 - client : rappel la veille et ~1 h avant son rendez-vous
+                            (robot GitHub Actions : scripts/ + .github/workflows/rappels.yml)
   Hébergement  : GitHub Pages
   ===================================================================== -->
 
@@ -992,6 +994,9 @@ const I18N = {
     confirm_del_legacy:"Supprimer cet ancien compte ? L'historique des prestations est conservé.",
     /* --- notifications push --- */
     notif_test:"Envoyer une notification de test", t_test_sent:"Test envoyé : regardez l'écran du téléphone.",
+    remind_title:"Rappels de rendez-vous", remind_hint:"Recevez une notification sur ce téléphone la veille de votre rendez-vous et environ 1 heure avant.",
+    remind_enable:"🔔 Activer les rappels", remind_on:"Rappels activés sur ce téléphone ✓",
+    remind_blocked:"Les notifications sont bloquées : autorisez-les dans les réglages du navigateur pour ce site.",
     notif_unsupported:"Ce navigateur ne gère pas les notifications. Sur iPhone : ajoutez d'abord l'app à l'écran d'accueil.",
     notif_new_review:"Nouvel avis", notif_new_user:"Nouveau client inscrit",
   },
@@ -1178,6 +1183,9 @@ const I18N = {
     confirm_del_legacy:"حذف هذا الحساب القديم؟ يبقى سجل الخدمات محفوظًا.",
     /* --- الإشعارات --- */
     notif_test:"إرسال إشعار تجريبي", t_test_sent:"تم إرسال التجربة: انظر إلى شاشة الهاتف.",
+    remind_title:"تذكير بالمواعيد", remind_hint:"استلم إشعارًا على هذا الهاتف في اليوم السابق لموعدك وقبله بساعة تقريبًا.",
+    remind_enable:"🔔 تفعيل التذكير", remind_on:"التذكير مفعّل على هذا الهاتف ✓",
+    remind_blocked:"الإشعارات محظورة: اسمح بها من إعدادات المتصفح لهذا الموقع.",
     notif_unsupported:"هذا المتصفح لا يدعم الإشعارات. على iPhone: أضف التطبيق أولًا إلى الشاشة الرئيسية.",
     notif_new_review:"تقييم جديد", notif_new_user:"زبون جديد مسجّل",
   },
@@ -1296,8 +1304,8 @@ const App = {
       this.recomputeCaisses();
       this.migrateLegacyUsers();
       this.pruneNotifs();
-      this.requestAlerts(true);     // ré-enregistre ce téléphone si les alertes sont déjà autorisées
     }
+    this.requestAlerts(true);       // ré-enregistre ce téléphone si les notifications sont déjà autorisées (admin ou client)
     if(this.lang) this.applyLang();
     this.route();
   },
@@ -1495,7 +1503,7 @@ const App = {
   async logout(){
     if(this._loggingOut) return; this._loggingOut=true;
     this.showBoot(true);
-    try{ if(this.isAdmin()) await this.removePushToken(); }catch(e){}   // ce téléphone ne reçoit plus les alertes admin
+    try{ if(this.isAdmin()) await this.removePushToken(); else await this.removeClientToken(); }catch(e){}   // ce téléphone ne reçoit plus les notifications de ce compte
     if(this._profileUnsub){ try{ this._profileUnsub(); }catch(e){} this._profileUnsub=null; }
     this.stopData();
     try{ if(this.auth) await this.auth.signOut(); }catch(e){}
@@ -1985,11 +1993,14 @@ const App = {
     if(!("serviceWorker" in navigator)) return Promise.resolve(undefined);
     return Promise.race([ navigator.serviceWorker.ready, new Promise(r=>setTimeout(()=>r(undefined), 4000)) ]);
   },
-  /* Active les notifications push (FCM) sur CE téléphone — réservé aux admins.
+  /* Active les notifications push (FCM) sur CE téléphone.
+     - admin  : alertes à chaque action d'un client (jetons dans fcmTokens/admin)
+     - client : rappels avant ses rendez-vous (jeton dans pushTokens/{uid}_{appareil})
      silent=true : ré-enregistrement automatique à l'ouverture, sans jamais demander l'autorisation. */
+  pushSupported(){ return ("Notification" in window) && ("serviceWorker" in navigator) && ("PushManager" in window); },
   async requestAlerts(silent){
-    if(!this.isAdmin()) return;
-    if(!("Notification" in window) || !("serviceWorker" in navigator)){ if(!silent) this.toast(this.t("notif_unsupported")); return; }
+    if(!this.profile) return;
+    if(!this.pushSupported()){ if(!silent) this.toast(this.t("notif_unsupported")); return; }
     try{
       let perm=Notification.permission;
       if(perm!=="granted"){
@@ -2001,12 +2012,39 @@ const App = {
       const reg=await this.swReady();
       const token=await messaging.getToken({ vapidKey:this.VAPID_KEY, serviceWorkerRegistration:reg });
       if(!token){ if(!silent) this.toast(this.t("notif_denied")); return; }
-      await this.savePushToken(token);
+      if(this.isAdmin()) await this.savePushToken(token);
+      else await this.saveClientToken(token);
       this._pushToken=token;
       this.bindForegroundPush(messaging);
-      if(!silent) this.toast(this.t("notif_enabled"));
-      this.renderNotifsPanel();
+      if(!silent) this.toast(this.isAdmin()?this.t("notif_enabled"):this.t("remind_on"));
+      if(this.isAdmin()) this.renderNotifsPanel(); else this.renderRdvClient();
     }catch(e){ console.warn("push:", e); if(!silent) this.toast(this.t("notif_denied")+(e&&e.code?" ("+e.code+")":"")); }
+  },
+  /* bouton « Activer les rappels » de l'espace client */
+  enableReminders(){ return this.busy("btn-remind", ()=>this.requestAlerts(false)); },
+  /* identifiant de CET appareil (gardé dans le navigateur) */
+  deviceId(){
+    let id=null; try{ id=localStorage.getItem("wc_device"); }catch(e){}
+    if(!id || !/^[A-Za-z0-9]{8,40}$/.test(id)){
+      id="d"+Math.random().toString(36).slice(2,12)+Date.now().toString(36);
+      try{ localStorage.setItem("wc_device", id); }catch(e){}
+    }
+    return id;
+  },
+  /* jeton d'un client : un document par (compte, appareil) — lu par le robot des rappels (scripts/) */
+  async saveClientToken(token){
+    if(!DB.db || !DB.uid) return;
+    const id=DB.uid+"_"+this.deviceId();
+    await DB.db.collection("pushTokens").doc(id).set({
+      id, token, userId:DB.uid, lang:this.lang==="ar"?"ar":"fr", updatedAt:Date.now()
+    });
+  },
+  /* à la déconnexion d'un client : ce téléphone ne reçoit plus ses rappels */
+  async removeClientToken(){
+    if(!DB.db || !DB.uid) return;
+    try{ await DB.db.collection("pushTokens").doc(DB.uid+"_"+this.deviceId()).delete(); }catch(e){ console.warn("removeClientToken:", e); }
+    try{ if(this.pushSupported() && Notification.permission==="granted") await firebase.messaging().deleteToken(); }catch(e){}
+    this._pushToken=null;
   },
   /* jetons des téléphones admin (plusieurs appareils / plusieurs admins possibles) */
   async savePushToken(token){
@@ -2046,7 +2084,10 @@ const App = {
         try{
           if(Notification.permission==="granted"){
             const n = new Notification(d.title || ("\u2702\uFE0F "+this.t("push_new_res")), { body:d.body||"", icon:"icon-192.png", tag:d.tag||"wassim" });
-            n.onclick=()=>{ try{ window.focus(); }catch(_){} this.goToNotif(d.kind||"file", d.jour||""); try{ n.close(); }catch(_){} };
+            n.onclick=()=>{ try{ window.focus(); }catch(_){}
+              if(this.isAdmin()) this.goToNotif(d.kind||"file", d.jour||"");
+              else if(this.profile) this.showTab("tab-rdv-client","client-nav");
+              try{ n.close(); }catch(_){} };
           }
         }catch(e){}
         try{ navigator.vibrate && navigator.vibrate([120,60,120]); }catch(e){}
@@ -2119,6 +2160,20 @@ const App = {
         <div class="acts"><button class="btn btn-danger btn-sm" onclick="App.cancelRdvClient('${b.id}')">${this.t("cancel_rdv")}</button></div>
       </div>`).join("") : `<div class="card empty"><div class="ic">📅</div><div>${this.t("rdv_none")}</div></div>`;
 
+    /* rappels push avant le rendez-vous (la veille + 1 h avant) */
+    let remindHTML;
+    if(this._pushToken){
+      remindHTML=`<div class="push-status">🔔 ${this.t("remind_on")}</div>`;
+    } else if(!this.pushSupported()){
+      remindHTML=`<div class="hint" style="margin:0">${this.t("notif_unsupported")}</div>`;
+    } else if(Notification.permission==="denied"){
+      remindHTML=`<div class="hint" style="margin:0">${this.t("remind_blocked")}</div>`;
+    } else {
+      remindHTML=`<div class="hint" style="margin:0 0 10px">${this.t("remind_hint")}</div>
+        <button class="btn btn-brass btn-block" id="btn-remind" onclick="App.enableReminders()">${this.t("remind_enable")}</button>`;
+    }
+    remindHTML=`<div class="card mt"><div class="tk-label" style="color:var(--brass-soft);margin-bottom:8px">${this.t("remind_title")}</div>${remindHTML}</div>`;
+
     w.innerHTML=`<div class="card">
         <div class="tk-label" style="color:var(--brass-soft);margin-bottom:8px">${this.t("rdv_pick_service")}</div>
         <div class="svc-pick">${svcs}</div>
@@ -2128,7 +2183,8 @@ const App = {
         <button class="btn btn-primary btn-block mt" onclick="App.bookRdv()">📅 ${this.t("rdv_confirm")}</button>
       </div>
       <div class="section-head mt"><h2 style="font-size:1.05rem">${this.t("rdv_my_title")}</h2></div>
-      ${mineHTML}`;
+      ${mineHTML}
+      ${remindHTML}`;
   },
   bookRdv(){
     const u=this.currentUser(); if(!u) return;
