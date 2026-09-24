@@ -23,6 +23,9 @@
    Chaque envoi est réservé dans la collection « pushLog » (par le robot OU
    par la Cloud Function) : jamais deux fois le même message.
 
+   Il applique aussi le MOT DE PASSE qu'un admin définit pour un client
+   (onglet Comptes → ✏️), puis l'efface de la base.
+
    Il termine aussi la SUPPRESSION des comptes demandée par l'admin
    (onglet Comptes → 🗑) : compte de connexion Firebase, profil, numéro,
    téléphones enregistrés. L'historique de la caisse est conservé.
@@ -79,6 +82,18 @@ const hm2min     = (hm) => { const [h, m] = String(hm || "").split(":").map((n) 
 console.log(`— Rappels ${SALON} — ${AUJOURDHUI} ${String(L.h).padStart(2, "0")}:${String(L.m).padStart(2, "0")} (Tunis)` +
             `${DRY_RUN ? " — TEST À BLANC" : ""}`);
 
+/* Rôle d'un compte (null si inconnu, bloqué ou supprimé) */
+const roles = new Map();
+async function roleOf(uid) {
+  if (!uid) return null;
+  if (roles.has(uid)) return roles.get(uid);
+  const s = await db.doc("users/" + uid).get();
+  const u = s.exists ? s.data() : null;
+  const r = !u || u.disabled === true ? null : (u.role === "admin" ? "admin" : "client");
+  roles.set(uid, r);
+  return r;
+}
+
 /* ---------------------------------------------------------------- */
 /*  0) Comptes supprimés par l'admin → suppression définitive        */
 /* ---------------------------------------------------------------- */
@@ -97,6 +112,29 @@ if (!DRY_RUN) {
     comptesSupprimes++;
   }
   if (comptesSupprimes) console.log(`  ${comptesSupprimes} compte(s) supprimé(s) définitivement.`);
+}
+
+/* ---------------------------------------------------------------- */
+/*  0b) Mot de passe défini par l'admin pour un client               */
+/*      (si la Cloud Function ne l'a pas déjà fait) — puis effacé    */
+/* ---------------------------------------------------------------- */
+let mdpAppliques = 0;
+if (!DRY_RUN) {
+  const snapPw = await db.collection("motsDePasse").get();
+  for (const d of snapPw.docs) {
+    const x = d.data() || {};
+    const valide = typeof x.pass === "string" && x.pass.length >= 6
+      && (await roleOf(x.by)) === "admin" && (await roleOf(d.id)) === "client";
+    if (valide) {
+      try { await getAuth().updateUser(d.id, { password: x.pass }); mdpAppliques++; }
+      catch (e) {
+        const c = String((e && e.code) || "");
+        if (!c.includes("user-not-found") && !c.includes("invalid-password")) { console.warn(`  ! mot de passe ${d.id} : ${c}`); continue; }
+      }
+    }
+    await d.ref.delete().catch(() => {});
+  }
+  if (mdpAppliques) console.log(`  ${mdpAppliques} mot(s) de passe client mis à jour.`);
 }
 
 /* ---------------------------------------------------------------- */
@@ -190,16 +228,6 @@ if (L.h >= 19 && L.h < 22) {
 
 /* 3) Alertes admin : actions des clients (cloche « notifs ») des 3 dernières heures
       — ignorées si la Cloud Function les a déjà envoyées (trace dans pushLog). */
-const roles = new Map();
-async function roleOf(uid) {
-  if (!uid) return null;
-  if (roles.has(uid)) return roles.get(uid);
-  const s = await db.doc("users/" + uid).get();
-  const u = s.exists ? s.data() : null;
-  const r = !u || u.disabled === true ? null : (u.role === "admin" ? "admin" : "client");
-  roles.set(uid, r);
-  return r;
-}
 const snapN = await db.collection("notifs").where("ts", ">=", NOW.getTime() - 3 * 3600000).get();
 for (const d of snapN.docs) {
   const n = d.data() || {};
