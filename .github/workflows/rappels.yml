@@ -4,7 +4,9 @@
 #  GitHub lance ce robot toutes les 15 minutes, gratuitement (dépôt public).
 #  Il envoie :
 #    • aux clients : rappel la veille (18h–22h) et ~1 h avant le rendez-vous
-#    • à l'admin   : récapitulatif le matin (aujourd'hui) et le soir (demain)
+#    • à l'admin   : récapitulatif le matin (aujourd'hui) et le soir (demain),
+#                    + chaque action d'un client et le bouton « test »
+#                    (si les Cloud Functions ne l'ont pas déjà fait en direct)
 #  Même si personne n'a l'application ouverte.
 #
 #  À faire UNE SEULE FOIS : déposer la clé de service Firebase dans
@@ -35,15 +37,16 @@ jobs:
     timeout-minutes: 8
     steps:
       - name: Récupérer le code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Installer Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "22"
+          package-manager-cache: false
 
       - name: Cache npm
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.npm
           key: npm-rappels-${{ hashFiles('scripts/package.json') }}
@@ -56,8 +59,4 @@ jobs:
         working-directory: scripts
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          # "0" : les alertes admin instantanées sont faites par les Cloud Functions (forfait Blaze).
-          # "1" : SANS Cloud Functions, ce robot prévient aussi l'admin de chaque action d'un client
-          #       (avec 15 à 30 min de retard). Ne jamais mettre "1" si les Cloud Functions sont déployées.
-          ADMIN_INSTANT: "0"
         run: node envoyer-rappels.mjs
